@@ -1,0 +1,90 @@
+{
+  "injected_source_failure": [
+    "gfs-fresh-unavailable"
+  ],
+  "recorded": true,
+  "service_fixture": true,
+  "source_execution": "live_openai",
+  "trace": [
+    {
+      "arguments": {
+        "snapshot_id": "gfs-fresh-unavailable"
+      },
+      "call_id": "call_ox4vYcSFTAig3VCcWOWBK5FM",
+      "outcome": {
+        "ok": false,
+        "reason": "weather source unavailable (injected demo failure)"
+      },
+      "response_id": "resp_066af0da8f85efbf016ab3b363e61887d29f86188e4335b510",
+      "tool": "get_weather_forecast",
+      "type": "AGENT_TOOL_CALL"
+    },
+    {
+      "arguments": {
+        "snapshot_id": "gfs-20260205-18z"
+      },
+      "call_id": "call_8byiXMIRIetrt3zeqrVjJTzB",
+      "outcome": {
+        "as_of": "2026-02-06T00:00:00+00:00",
+        "ok": true,
+        "snapshot_hash": "bb40a14907eacbd772ff3f5ee6e73f4fa2e40f1b2189eadfcc5cb5305c1b0c8d",
+        "snapshot_id": "gfs-20260205-18z"
+      },
+      "response_id": "resp_066af0da8f85efbf016ab3b3662f1487d288a42d621e025b75",
+      "tool": "get_weather_forecast",
+      "type": "AGENT_TOOL_CALL"
+    },
+    {
+      "arguments": {},
+      "call_id": "call_hLsl5WwdaGQFk5ROkzbVeNbB",
+      "outcome": {
+        "data": "PASS",
+        "model_id": "service-fixture-linear-v1",
+        "ok": true,
+        "snapshot_id": "gfs-20260205-18z",
+        "temporal": "PASS"
+      },
+      "response_id": "resp_066af0da8f85efbf016ab3b369346087d2a1d0c5ecae98b83d",
+      "tool": "validate_inputs",
+      "type": "AGENT_TOOL_CALL"
+    },
+    {
+      "arguments": {
+        "model_id": "service-fixture-linear-v1"
+      },
+      "call_id": "call_aciq3KZWtVcHQ36jYWNINW6S",
+      "outcome": {
+        "artifact_id": "a79f0bb2-20fd-45a8-a09a-3cec463a1163",
+        "ok": true,
+        "status": "COMPUTED"
+      },
+      "response_id": "resp_066af0da8f85efbf016ab3b36b40f487d2a627c5e07acb3ac4",
+      "tool": "run_forecast",
+      "type": "AGENT_TOOL_CALL"
+    },
+    {
+      "arguments": {},
+      "call_id": "call_l6EYyeSEhBVGkZaMjQ13S83L",
+      "outcome": {
+        "artifact_id": "a79f0bb2-20fd-45a8-a09a-3cec463a1163",
+        "forecast": "PASS",
+        "ok": true
+      },
+      "response_id": "resp_066af0da8f85efbf016ab3b36d71e487d2ac60df7a37f80c8a",
+      "tool": "validate_forecast",
+      "type": "AGENT_TOOL_CALL"
+    },
+    {
+      "arguments": {},
+      "call_id": "call_AVy1DHRRhlfRl3oUNob7Pl6Y",
+      "outcome": {
+        "artifact_id": "a79f0bb2-20fd-45a8-a09a-3cec463a1163",
+        "ok": true,
+        "publication": "APPROVED"
+      },
+      "response_id": "resp_066af0da8f85efbf016ab3b36fae5487d2a458fc01448594f2",
+      "tool": "publish_forecast",
+      "type": "AGENT_TOOL_CALL"
+    }
+  ]
+}
