@@ -7,13 +7,14 @@ from contextlib import closing
 from datetime import timedelta
 from pathlib import Path
 
-from backend.forecasting.adapter import FEATURES
-from backend.replay import parse_timestamp
+from backend.forecasting.adapter import FEATURES, ModelBlocked, load_bundle, predict
+from backend.replay import ReplayContext, parse_timestamp
 from backend.storage import Store
 from backend.workflow import ForecastService, RegistryError
 
 
 FIXTURE = Path(__file__).parents[1] / "data/fixtures/noaa-gfs-20260206T000000Z-h48.json"
+SCADA = Path(__file__).parents[1] / "artifacts/models/brev-scada-pooled-lgbm-20260201"
 
 
 class WorkflowTests(unittest.TestCase):
@@ -55,6 +56,57 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(result["status"],"BLOCKED")
         self.assertEqual(result["points"],[])
         self.assertIn("missing",result["error"])
+
+    def test_committed_scada_bundle_cpu_fixture_and_cutoff(self):
+        fixture = json.loads((SCADA / "cpu_fixture.json").read_text())
+        bundle = load_bundle(SCADA, "brev-scada-pooled-lgbm-20260201", ReplayContext(parse_timestamp("2026-02-06T00:00:00Z"), 48))
+        actual = [item["normalized_power"] for item in predict(bundle, fixture["input"])]
+        for value, expected in zip(actual, fixture["expected_normalized_power"]):
+            self.assertAlmostEqual(value, expected, delta=fixture["absolute_tolerance"])
+        with self.assertRaisesRegex(ModelBlocked, "future training_cutoff"):
+            load_bundle(SCADA, "brev-scada-pooled-lgbm-20260201", ReplayContext(parse_timestamp("2026-01-31T18:00:00Z"), 24))
+
+    def test_committed_scada_bundle_service_run_records_warning_and_provenance(self):
+        shutil.copytree(SCADA, self.models / "brev-scada-pooled-lgbm-20260201")
+        run, _ = self.create(model="brev-scada-pooled-lgbm-20260201")
+        self.service.process_one()
+        result = self.service.get_forecast(run["id"])
+        self.assertEqual(result["status"], "SUCCEEDED")
+        self.assertEqual(len(result["points"]), 96)
+        self.assertTrue(all(0 <= point["normalized_power"] <= 1 for point in result["points"]))
+        self.assertIn("operational forecast accuracy is unmeasured", result["warnings"][0])
+        audit = self.service.get_audit(run["id"])["details"]
+        self.assertEqual(audit["model_kind"], "scada_lightgbm_v1")
+        self.assertEqual(audit["model_training_cutoff"], "2026-01-31T19:00:00Z")
+        self.assertEqual(audit["model_sha256"], json.loads((SCADA / "metadata.json").read_text())["model_sha256"])
+
+    def test_tampered_scada_model_blocks(self):
+        bundle_dir = self.models / "brev-scada-pooled-lgbm-20260201"
+        shutil.copytree(SCADA, bundle_dir)
+        (bundle_dir / "model.txt").write_text("tampered")
+        run, _ = self.create(model="brev-scada-pooled-lgbm-20260201")
+        self.service.process_one()
+        self.assertIn("SHA-256", self.service.get_forecast(run["id"])["error"])
+
+    def test_tampered_scada_schema_blocks(self):
+        bundle_dir = self.models / "brev-scada-pooled-lgbm-20260201"
+        shutil.copytree(SCADA, bundle_dir)
+        metadata = json.loads((bundle_dir / "feature_schema.json").read_text())
+        metadata["feature_order"] = list(reversed(metadata["feature_order"]))
+        (bundle_dir / "feature_schema.json").write_text(json.dumps(metadata))
+        run, _ = self.create(model="brev-scada-pooled-lgbm-20260201")
+        self.service.process_one()
+        self.assertIn("feature schema", self.service.get_forecast(run["id"])["error"])
+
+    def test_symlinked_scada_member_blocks(self):
+        bundle_dir = self.models / "brev-scada-pooled-lgbm-20260201"
+        shutil.copytree(SCADA, bundle_dir)
+        (bundle_dir / "model.txt").unlink()
+        (bundle_dir / "model.txt").symlink_to(Path("/etc/hosts"))
+        run, _ = self.create(model="brev-scada-pooled-lgbm-20260201")
+        self.service.process_one()
+        self.assertEqual(self.service.get_forecast(run["id"])["status"], "BLOCKED")
+        self.assertIn("escapes registry", self.service.get_forecast(run["id"])["error"])
 
     def test_root_and_revision_requests_are_idempotent(self):
         first, created = self.create()

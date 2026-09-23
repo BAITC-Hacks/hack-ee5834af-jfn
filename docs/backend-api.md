@@ -12,12 +12,25 @@ python -m venv .venv
 FORECAST_DATA_DIR=data/runtime .venv/bin/uvicorn backend.api.app:app
 ```
 
+LightGBM needs an OpenMP runtime: install `libgomp1` on Linux or `libomp` on macOS before starting the service.
+
 Register inputs by placing JSON files under the server-controlled directories:
 
 - `data/runtime/snapshots/<weather_snapshot_id>.json`
-- `data/runtime/models/<model_id>.json`
+- `data/runtime/models/<model_id>.json` for the legacy linear adapter, or `data/runtime/models/<model_id>/` for a native SCADA LightGBM bundle.
 
 Request bodies contain IDs only. Paths and URLs are rejected. The service revalidates the complete weather snapshot against `as_of` and resolves model metadata, schema and cutoffs before inference.
+
+To run the committed native bundle against the included archived 48-hour GFS fixture:
+
+```bash
+mkdir -p data/runtime/snapshots data/runtime/models
+cp data/fixtures/noaa-gfs-20260206T000000Z-h48.json data/runtime/snapshots/gfs-feb6.json
+cp -R artifacts/models/brev-scada-pooled-lgbm-20260201 data/runtime/models/
+FORECAST_DATA_DIR=data/runtime .venv/bin/uvicorn backend.api.app:app
+```
+
+Then submit `model_id` `brev-scada-pooled-lgbm-20260201`, `weather_snapshot_id` `gfs-feb6`, and origin `2026-02-06T00:00:00Z`. The adapter checks `model.txt` SHA-256, schema, cutoff (`2026-01-31T19:00:00Z`) and fixed mapping: GFS `wind_speed_100m` and `temperature_2m`, plus wind squared/cubed and the target start converted from UTC to `Asia/Almaty`. `T1` and `T2` map to numeric IDs 1 and 2. The forecast response carries the experimental-input warning; the audit response records bundle limitations. The local hour-start convention is an explicit training assumption; no operational accuracy has been measured.
 
 ## Endpoints
 
@@ -27,7 +40,7 @@ Request bodies contain IDs only. Paths and URLs are rejected. The service revali
 {
   "as_of": "2026-02-06T00:00:00Z",
   "horizon": 48,
-  "model_id": "linear-v1",
+  "model_id": "brev-scada-pooled-lgbm-20260201",
   "weather_snapshot_id": "gfs-feb6",
   "mode": "replay"
 }
@@ -49,7 +62,7 @@ Create an immutable child revision with `POST /forecast-runs/{id}/recalculate`:
 
 `as_of` is the new information cutoff and first target hour. A newer snapshot cannot be attached to the parent's old cutoff. In live mode the scheduler only accepts a snapshot whose origin equals the current UTC hour. Replay events use the snapshot's explicit target origin. Repeated input content returns the existing revision.
 
-If the model is missing or incompatible, the run becomes `BLOCKED`, the audit records the reason and `/forecast` returns an empty `points` list. The backend never fabricates power values. The included linear JSON adapter is an explicit model bundle format; its predictions are only produced when the registered feature schema and temporal cutoffs validate.
+If the model is missing, incompatible or tampered, the run becomes `BLOCKED`, the audit records the reason and `/forecast` returns an empty `points` list. The backend never fabricates power values. The legacy linear JSON adapter remains available; native directory bundles are loaded only when their registered files remain contained in the server-controlled model directory.
 
 ## Service contract for tools
 

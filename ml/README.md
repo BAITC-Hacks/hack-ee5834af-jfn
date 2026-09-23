@@ -17,6 +17,6 @@ python ml/train_brev.py --config ml/config.brev-assumptions.json \
   --turbine-2 data/training/turbine_2.csv --out reproduced
 ```
 
-This command retrains. To verify the saved model without retraining, run `python ml/verify_model.py`. The bundle's `cpu_fixture.json` contains two predictions verified against `best_model.joblib` on Brev; `data_manifest.json` records source hashes and the measured-weather validation summary. The current backend does not yet load this bundle; its adapter is a separate refactor.
+This command retrains. To verify the saved model without retraining, run `python ml/verify_model.py`. The bundle's `cpu_fixture.json` contains two predictions verified against `best_model.joblib` on Brev; `data_manifest.json` records source hashes and the measured-weather validation summary. The backend loads the committed native `model.txt` directly with LightGBM on CPU; it does not load pickle, joblib, or arbitrary model code. The training command does not reproduce the committed handoff metadata, manifests, or fixture as a complete serving bundle.
 
 The metrics from observed weather cannot be used as an archived forecast backtest. GFS uses instantaneous 100 m wind and 2 m temperature, while SCADA training inputs were hourly measured averages. Evaluate the API against archived GFS and subsequently available labels before making accuracy claims.
