@@ -20,7 +20,7 @@ export function createDemoData(request: ReplayRequest): DashboardData {
     ],
     warnings: ['Illustrative fixture only — values are not an operational forecast.', 'Fresh SCADA is unavailable in this fixture.'],
     events: [
-      { id: '1', time: '00:00', tool: 'create_run_context', detail: 'Locked replay origin and 48h policy', status: 'done' },
+      { id: '1', time: '00:00', tool: 'create_run_context', detail: `Locked replay origin and ${request.horizon}h policy`, status: 'done' },
       { id: '2', time: '00:01', tool: 'resolve_weather', detail: 'Selected a demo weather snapshot', status: 'done' },
       { id: '3', time: '00:02', tool: 'validate_inputs', detail: 'SCADA freshness unavailable', status: 'warning' },
       { id: '4', time: '00:03', tool: 'publish_forecast', detail: 'Published illustrative fixture', status: 'done' },
@@ -28,8 +28,9 @@ export function createDemoData(request: ReplayRequest): DashboardData {
   };
 }
 
+const demoRequests = new Map<string, ReplayRequest>();
 export const demoAdapter: DashboardAdapter = {
-  async start(request) { return createDemoData(request).run; },
+  async start(request) { const run = createDemoData(request).run; demoRequests.set(run.id, request); return run; },
   async status(runId) { return { id: runId, status: 'succeeded' }; },
-  async result(runId) { const horizon = runId.includes('24h') ? 24 : 48; return createDemoData({ asOf: '2026-02-06T00:00:00+05:00', horizon }); },
+  async result(runId) { const saved = demoRequests.get(runId); if (!saved) throw new Error(`Unknown demo run ${runId}`); return createDemoData(saved); },
 };

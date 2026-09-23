@@ -9,7 +9,11 @@ describe('data adapters', () => {
     await expect(createApiAdapter('/api').start({ asOf: '2026-02-06T00:00:00+05:00', horizon: 24 })).rejects.toThrow('POST /forecast-runs failed (503)');
   });
   it('marks fixture results as demo data', async () => {
-    const run = await demoAdapter.start({ asOf: '2026-02-06T00:00:00+05:00', horizon: 24 });
-    expect((await demoAdapter.result(run.id)).isDemo).toBe(true);
+    const run = await demoAdapter.start({ asOf: '2026-02-08T12:00:00+05:00', horizon: 24 });
+    const result = await demoAdapter.result(run.id);
+    expect(result.isDemo).toBe(true);
+    expect(result.forecast).toHaveLength(24);
+    expect(result.audit[0].value).toBe('2026-02-08T07:00:00.000Z');
+    expect(result.events[0].detail).toContain('24h policy');
   });
 });

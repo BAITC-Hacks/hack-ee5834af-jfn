@@ -1,11 +1,11 @@
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { ForecastPoint } from '../types';
 
-export function ForecastChart({ points }: { points: ForecastPoint[] }) {
+export function ForecastChart({ points, isDemo }: { points: ForecastPoint[]; isDemo: boolean }) {
   const data = points.map(p => ({ ...p, hour: new Date(p.targetStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }));
   return <section className="card chart-card" aria-labelledby="chart-title">
     <div className="section-heading"><div><span className="eyebrow">Normalized power · 0–1</span><h2 id="chart-title">Two-turbine forecast</h2></div><span className="chart-range">{points.length} hours</span></div>
-    <p className="muted">Illustrative forecast series only. Actuals and confidence intervals are unavailable.</p>
+    <p className="muted">{isDemo ? 'Illustrative fixture series only. ' : ''}Actuals and confidence intervals are unavailable.</p>
     <div className="chart-wrap" aria-label="Forecast lines for Turbine 1 and Turbine 2">
       <ResponsiveContainer width="100%" height="100%"><LineChart data={data} margin={{ top: 20, right: 12, left: -18, bottom: 5 }}>
         <CartesianGrid stroke="#e7eeeb" vertical={false} strokeDasharray="3 6" /><XAxis dataKey="hour" minTickGap={38} tickLine={false} axisLine={false} tick={{ fill: '#75817b', fontSize: 11 }} />
