@@ -18,7 +18,7 @@ export const copy = {
     sampleData: 'Үлгі деректер', sampleNotice: 'Көрсетілген мәндер интерфейсті алдын ала қарауға арналған.', loadError: 'Болжам жүктелмеді', noFallback: 'Үлгі деректермен алмастырылған жоқ.', retry: 'Қайталау',
     modelVersion: 'Модель нұсқасы', weatherAge: 'Ауа райы деректерінің жасы', scadaFreshness: 'SCADA өзектілігі', temporalValidation: 'Уақыттық тексеру', unavailable: 'Қолжетімсіз', loading: 'Жүктелуде…', empty: 'Дерек көзін таңдап, болжамды іске қосыңыз.',
     powerForecast: 'Қуат болжамы', normalizedOutput: 'Нормаланған қуат · 1 және 2 турбина', hours: 'сағат', sampleChart: 'Үлгі деректер. ', intervalsUnavailable: 'Нақты мәндер мен сенімділік аралықтары қолжетімсіз.', turbine1: '1-турбина', turbine2: '2-турбина', normalizedPower: 'Нормаланған қуат',
-    agentActivity: 'Агент әрекеттері', toolsUsed: 'Осы іске қосуда пайдаланылған құралдар', complete: 'Аяқталды', done: 'Дайын', warning: 'Ескерту', runDetails: 'Іске қосу мәліметтері', detailsSubtitle: 'Кірістер, тексерулер және нұсқалар тарихы', warnings: 'Ескертулер', revisionHistory: 'Нұсқалар тарихы', parent: 'Алдыңғы нұсқа', firstRevision: 'Бірінші нұсқа', noActiveRun: 'Белсенді іске қосу жоқ', sampleRun: 'Үлгі іске қосу',
+    agentActivity: 'Pipeline белсенділігі', toolsUsed: 'Осы іске қосудың worker оқиғалары', complete: 'Аяқталды', done: 'Дайын', warning: 'Ескерту', runDetails: 'Іске қосу мәліметтері', detailsSubtitle: 'Кірістер, тексерулер және нұсқалар тарихы', warnings: 'Ескертулер', revisionHistory: 'Нұсқалар тарихы', parent: 'Алдыңғы нұсқа', firstRevision: 'Бірінші нұсқа', noActiveRun: 'Белсенді іске қосу жоқ', sampleRun: 'Үлгі іске қосу',
     english: 'English', kazakh: 'Қазақша', language: 'Тіл',
   },
 } as const;
