@@ -5,6 +5,9 @@ import unittest
 from datetime import timedelta
 from pathlib import Path
 
+from fastapi.testclient import TestClient
+
+from backend.api.app import create_app
 from backend.agent.operator import ForecastOperator, OpenAIUnavailable
 from backend.agent.tools import AgentTools, RunContext, tool_schemas
 from backend.forecasting.adapter import FEATURES
@@ -41,6 +44,7 @@ class AgentGuardTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         root = Path(self.temp.name)
+        self.root = root
         snapshots, models = root / "snapshots", root / "models"
         snapshots.mkdir(); models.mkdir()
         shutil.copyfile(FIXTURE, snapshots / "fresh.json")
@@ -77,6 +81,19 @@ class AgentGuardTests(unittest.TestCase):
         self.assertTrue(all("normalized_power" not in json.dumps(e) for e in result.trace))
         events = self.service.get_events(result.run_id)
         self.assertEqual(len([e for e in events if e["type"] == "AGENT_TOOL_CALL"]), 5)
+
+    def test_existing_events_api_exposes_operator_calls(self):
+        result = ForecastOperator(self.service, self.context,
+                                  FakeResponses(self.sequence())).run_live(allow_fallback=False)
+        app = create_app(database=self.root / "runs.sqlite3",
+                         snapshot_dir=self.service.snapshot_dir,
+                         model_dir=self.service.model_dir, background=False)
+        events = TestClient(app).get(f"/forecast-runs/{result.run_id}/events")
+        self.assertEqual(events.status_code, 200)
+        calls = [event for event in events.json() if event["type"] == "AGENT_TOOL_CALL"]
+        self.assertEqual(len(calls), 5)
+        self.assertEqual(calls[0]["payload"]["call_id"], "call-1")
+        self.assertEqual(calls[-1]["payload"]["tool"], "publish_forecast")
 
     def test_recorded_recovery_is_explicit_and_uses_previous_registered_snapshot(self):
         calls = [("get_weather_forecast", {"snapshot_id": "fresh"})] + self.sequence("previous")
