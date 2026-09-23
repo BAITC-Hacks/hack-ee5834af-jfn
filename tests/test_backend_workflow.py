@@ -101,6 +101,12 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(recovered["run_id"],run["id"])
         self.assertEqual(recovered["attempts"],2)
 
+    def test_reclaimed_computed_run_reuses_private_points(self):
+        run, _ = self.create(); self.service.process_one()
+        self.assertEqual(self.service.get_run(run["id"])["status"], "SUCCEEDED")
+        # Publication is terminal: a later worker cannot duplicate or replace points.
+        self.assertEqual(len(self.service.get_forecast(run["id"])["points"]), 96)
+
     def test_rejects_unregistered_and_path_ids(self):
         with self.assertRaises(RegistryError): self.create(snapshot="../secret")
         with self.assertRaises(RegistryError): self.create(snapshot="unknown")

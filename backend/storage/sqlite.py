@@ -133,7 +133,7 @@ class Store:
             lease = (now + timedelta(seconds=lease_seconds)).isoformat()
             db.execute("UPDATE jobs SET status='RUNNING',attempts=attempts+1,lease_until=?,updated_at=? WHERE id=?",
                        (lease,now.isoformat(),row["id"]))
-            db.execute("UPDATE runs SET status='RUNNING',updated_at=? WHERE id=?", (now.isoformat(),row["run_id"]))
+            db.execute("UPDATE runs SET status=CASE WHEN status='COMPUTED' THEN 'COMPUTED' ELSE 'RUNNING' END,updated_at=? WHERE id=?", (now.isoformat(),row["run_id"]))
             db.execute("INSERT INTO events(run_id,created_at,type,payload_json) VALUES(?,?,?,?)",
                        (row["run_id"],now.isoformat(),"JOB_CLAIMED",json.dumps({"lease_until":lease})))
             return dict(db.execute("SELECT * FROM jobs WHERE id=?", (row["id"],)).fetchone())

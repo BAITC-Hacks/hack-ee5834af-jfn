@@ -125,6 +125,8 @@ class ForecastService:
     def compute_run(self, run_id: str, worker_attempt: int | None = None) -> str:
         run = self.store.get_run(run_id)
         if not run: raise KeyError(run_id)
+        if run["status"] in ("COMPUTED", "SUCCEEDED"):
+            return run_id
         context = ReplayContext(parse_timestamp(run["as_of"]),run["horizon"])
         audit = {"input_hash":run["input_hash"],"snapshot_hash":run["snapshot_hash"],"worker_attempt":worker_attempt}
         try:
