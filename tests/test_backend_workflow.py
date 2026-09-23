@@ -102,7 +102,7 @@ class WorkflowTests(unittest.TestCase):
     def test_committed_scada_bundle_service_run_records_warning_and_provenance(self):
         shutil.copytree(SCADA, self.models / "brev-scada-pooled-lgbm-20260201")
         run, _ = self.create(model="brev-scada-pooled-lgbm-20260201")
-        self.service.compute_run(run["id"])
+        self.service.process_one()
         result = self.service.get_forecast(run["id"])
         self.assertEqual(result["status"], "SUCCEEDED")
         self.assertEqual(len(result["points"]), 96)
