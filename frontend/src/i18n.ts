@@ -8,7 +8,7 @@ export const copy = {
     sampleData: 'Sample data', sampleNotice: 'Displayed values are for interface preview only.', loadError: 'Forecast could not be loaded', noFallback: 'No sample data was substituted.', retry: 'Retry',
     modelVersion: 'Model version', weatherAge: 'Weather age', scadaFreshness: 'SCADA freshness', temporalValidation: 'Temporal validation', unavailable: 'Unavailable', loading: 'Loading…', empty: 'Choose a source and run a forecast to inspect its evidence.',
     powerForecast: 'Power forecast', normalizedOutput: 'Normalized output · Turbine 1 and Turbine 2', hours: 'hours', sampleChart: 'Sample data. ', intervalsUnavailable: 'Actuals and confidence intervals are unavailable.', turbine1: 'Turbine 1', turbine2: 'Turbine 2', normalizedPower: 'Normalized power',
-    agentActivity: 'Agent activity', toolsUsed: 'Tools used for this run', complete: 'Complete', done: 'Done', warning: 'Warning', runDetails: 'Run details', detailsSubtitle: 'Inputs, validation, and revision history', warnings: 'Warnings', revisionHistory: 'Revision history', parent: 'Parent', firstRevision: 'First revision', noActiveRun: 'No active run', sampleRun: 'Sample run',
+    agentActivity: 'Pipeline activity', toolsUsed: 'Worker lifecycle events for this run', complete: 'Complete', done: 'Done', warning: 'Warning', runDetails: 'Run details', detailsSubtitle: 'Inputs, validation, and revision history', warnings: 'Warnings', revisionHistory: 'Revision history', parent: 'Parent', firstRevision: 'First revision', noActiveRun: 'No active run', sampleRun: 'Sample run',
     english: 'English', kazakh: 'Қазақша', language: 'Language',
   },
   kk: {

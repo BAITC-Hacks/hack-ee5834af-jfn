@@ -13,11 +13,11 @@ const terminal = new Set(['succeeded', 'failed']);
 function pollDelay(signal: AbortSignal) { return new Promise<void>((resolve, reject) => { const timer = window.setTimeout(resolve, 900); signal.addEventListener('abort', () => { window.clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }, { once: true }); }); }
 
 export default function App() {
-  const [source, setSource] = useState<SourceMode>('demo');
+  const [source, setSource] = useState<SourceMode>('api');
   const [language, setLanguage] = useState<Language>(() => localStorage.getItem('wind-language') === 'kk' ? 'kk' : 'en');
   const [languageOpen, setLanguageOpen] = useState(false);
   const languageMenu = useRef<HTMLDivElement | null>(null);
-  const [request, setRequest] = useState<ReplayRequest>({ asOf: '2026-02-06T00:00:00+05:00', horizon: 48 });
+  const [request, setRequest] = useState<ReplayRequest>({ asOf: '2026-02-06T05:00:00+05:00', horizon: 48 });
   const [data, setData] = useState<DashboardData | null>(null); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const controller = useRef<AbortController | null>(null); const adapter = useMemo(() => source === 'demo' ? demoAdapter : api, [source]);
   useEffect(() => () => controller.current?.abort(), []);
@@ -29,7 +29,7 @@ export default function App() {
     try {
       let summary = await adapter.start(request, current.signal);
       while (!terminal.has(summary.status)) { await pollDelay(current.signal); summary = await adapter.status(summary.id, current.signal); }
-      if (summary.status === 'failed') throw new Error(`Run ${summary.id} failed`);
+      if (summary.status === 'failed') throw new Error(summary.error ?? `Run ${summary.id} failed`);
       const result = await adapter.result(summary.id, current.signal); if (!current.signal.aborted) setData(result);
     } catch (cause) { if (!current.signal.aborted) setError(cause instanceof Error ? cause.message : 'Unable to run forecast'); }
     finally { if (!current.signal.aborted) setBusy(false); }

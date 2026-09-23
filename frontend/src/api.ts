@@ -1,22 +1,13 @@
-import type { AuditItem, DashboardAdapter, DashboardData, ForecastPoint, ReplayRequest, RunSummary, AgentEvent } from './types';
+import type { AgentEvent, AuditItem, DashboardAdapter, DashboardData, ForecastPoint, ReplayRequest, RunSummary } from './types';
 
-async function request<T>(base: string, path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${base.replace(/\/$/, '')}${path}`, { headers: { 'content-type': 'application/json' }, ...init });
-  if (!response.ok) throw new Error(`${init?.method ?? 'GET'} ${path} failed (${response.status})`);
-  return response.json() as Promise<T>;
-}
-
-export function createApiAdapter(baseUrl: string): DashboardAdapter {
-  return {
-    start: (payload: ReplayRequest, signal?: AbortSignal) => request<RunSummary>(baseUrl, '/forecast-runs', { method: 'POST', signal, body: JSON.stringify({ as_of: payload.asOf, horizon: payload.horizon }) }),
-    status: (id: string, signal?: AbortSignal) => request<RunSummary>(baseUrl, `/forecast-runs/${id}`, { signal }),
-    async result(id: string, signal?: AbortSignal) {
-      const [run, forecast, audit, events] = await Promise.all([
-        request<RunSummary>(baseUrl, `/forecast-runs/${id}`, { signal }), request<ForecastPoint[]>(baseUrl, `/forecast-runs/${id}/forecast`, { signal }),
-        request<{ items: AuditItem[]; warnings?: string[]; modelVersion?: string; weatherAge?: string; scadaFreshness?: string; temporalValidation?: string }>(baseUrl, `/forecast-runs/${id}/audit`, { signal }),
-        request<AgentEvent[]>(baseUrl, `/forecast-runs/${id}/events`, { signal }),
-      ]);
-      return { isDemo: false, run, forecast, events, audit: audit.items, warnings: audit.warnings ?? [], modelVersion: audit.modelVersion, weatherAge: audit.weatherAge, scadaFreshness: audit.scadaFreshness, temporalValidation: audit.temporalValidation } satisfies DashboardData;
-    },
-  };
-}
+const modelId = import.meta.env.VITE_MODEL_ID ?? 'brev-scada-pooled-lgbm-20260201';
+const snapshotId = import.meta.env.VITE_WEATHER_SNAPSHOT_ID ?? 'gfs-feb6';
+async function request<T>(base:string,path:string,init?:RequestInit):Promise<T>{ const response=await fetch(`${base.replace(/\/$/,'')}${path}`,{headers:{'content-type':'application/json'},...init}); if(!response.ok) throw new Error(`${init?.method ?? 'GET'} ${path} failed (${response.status})`); return response.json() as Promise<T>; }
+function run(value:{id:string;status:string;parent_run_id?:string|null;error?:string|null}):RunSummary { const status=({QUEUED:'queued',RUNNING:'running',SUCCEEDED:'succeeded',BLOCKED:'failed',FAILED:'failed'} as Record<string,RunSummary['status']>)[value.status]; if(!status) throw new Error(`Unknown backend run status: ${value.status}`); return {id:value.id,status,parentRunId:value.parent_run_id??undefined,error:value.error??undefined}; }
+export function createApiAdapter(baseUrl:string):DashboardAdapter { return {
+  async start(payload,signal){ return run(await request(baseUrl,'/forecast-runs',{method:'POST',signal,body:JSON.stringify({as_of:payload.asOf,horizon:payload.horizon,model_id:modelId,weather_snapshot_id:snapshotId,mode:'replay'})})); },
+  async status(id,signal){ return run(await request(baseUrl,`/forecast-runs/${id}`,{signal})); },
+  async result(id,signal){ const [rawRun,rawForecast,rawAudit,rawEvents]=await Promise.all([request<{id:string;status:string;parent_run_id?:string|null;error?:string|null}>(baseUrl,`/forecast-runs/${id}`,{signal}),request<{points:Array<{turbine_id:string;target_start:string;normalized_power:number}>;warnings:string[]}>(baseUrl,`/forecast-runs/${id}/forecast`,{signal}),request<{as_of:string;weather_snapshot_id:string;snapshot_hash:string;details:Record<string,unknown>}>(baseUrl,`/forecast-runs/${id}/audit`,{signal}),request<Array<{seq:number;created_at:string;type:string;payload:unknown}>>(baseUrl,`/forecast-runs/${id}/events`,{signal})]);
+    const grouped=new Map<string,ForecastPoint>(); for(const point of rawForecast.points){if(!Number.isFinite(point.normalized_power)||!['T1','T2'].includes(point.turbine_id))throw new Error('Backend forecast contains an invalid point'); const row=grouped.get(point.target_start)??{targetStart:point.target_start,turbine1:NaN,turbine2:NaN}; const key=point.turbine_id==='T1'?'turbine1':'turbine2';if(Number.isFinite(row[key]))throw new Error('Backend forecast contains duplicate turbine coverage');row[key]=point.normalized_power;grouped.set(point.target_start,row);} const forecast=[...grouped.values()].sort((a,b)=>a.targetStart.localeCompare(b.targetStart));if(!forecast.length||forecast.some(p=>!Number.isFinite(p.turbine1)||!Number.isFinite(p.turbine2)))throw new Error('Backend forecast has incomplete turbine coverage');
+    const d=rawAudit.details; const audit:AuditItem[]=[{label:'Replay as of',value:rawAudit.as_of},{label:'Snapshot ID',value:rawAudit.weather_snapshot_id},{label:'Snapshot hash',value:rawAudit.snapshot_hash},{label:'Training cutoff',value:typeof d.model_training_cutoff==='string'?d.model_training_cutoff:undefined},{label:'Model SHA-256',value:typeof d.model_sha256==='string'?d.model_sha256:undefined},{label:'Weather mapping',value:d.model_weather_mapping?JSON.stringify(d.model_weather_mapping):undefined}];if(Array.isArray(d.model_limitations))audit.push({label:'Model limitations',value:d.model_limitations.join(' ')}); const events:AgentEvent[]=rawEvents.map(e=>({id:String(e.seq),time:e.created_at,tool:e.type,detail:JSON.stringify(e.payload),status:e.type==='RUN_BLOCKED'?'failed':'done'}));return {isDemo:false,run:run(rawRun),forecast,events,audit,warnings:rawForecast.warnings??[],modelVersion:modelId} satisfies DashboardData;
+  }}; }
