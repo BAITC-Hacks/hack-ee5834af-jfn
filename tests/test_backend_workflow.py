@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 import shutil
 import sqlite3
 import tempfile
@@ -8,7 +9,7 @@ from contextlib import closing
 from datetime import timedelta
 from pathlib import Path
 
-from backend.forecasting.adapter import FEATURES, ModelBlocked, load_native_bundle, predict
+from backend.forecasting.adapter import FEATURES, ModelBlocked, load_bundle, load_native_bundle, predict
 from backend.replay import ReplayContext, parse_timestamp
 from backend.storage import Store
 from backend.workflow import ForecastService, RegistryError
@@ -17,6 +18,9 @@ from backend.agent.tools import RunContext
 
 
 FIXTURE = Path(__file__).parents[1] / "data/fixtures/noaa-gfs-20260206T000000Z-h48.json"
+SCADA = Path(__file__).parents[1] / "artifacts/models/brev-scada-pooled-lgbm-20260201"
+
+
 class WorkflowTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -33,12 +37,12 @@ class WorkflowTests(unittest.TestCase):
         self.store = Store(root / "runs.sqlite3")
         self.service = ForecastService(self.store,self.snapshots,self.models)
         class Recorded:
-            def __init__(self): self.calls = iter([("get_weather_forecast", {"snapshot_id":"gfs-feb6"}), ("validate_inputs", {}), ("run_forecast", {"model_id":"linear-v1"}), ("validate_forecast", {}), ("publish_forecast", {})])
+            def __init__(self, context): self.calls = iter([("get_weather_forecast", {"snapshot_id":context.candidates[0]}), ("validate_inputs", {}), ("run_forecast", {"model_id":context.model_id}), ("validate_forecast", {}), ("publish_forecast", {})])
             def respond(self, *_):
                 try: name,args=next(self.calls)
                 except StopIteration: return {"output":[]}
                 return {"id":"test","output":[{"type":"function_call","name":name,"arguments":json.dumps(args),"call_id":name}]}
-        self.service.operator_factory = lambda service, context, run_id, attempt: ForecastOperator(service, context, Recorded(), run_id=run_id, worker_attempt=attempt)
+        self.service.operator_factory = lambda service, context, run_id, attempt: ForecastOperator(service, context, Recorded(context), run_id=run_id, worker_attempt=attempt)
 
     def native_fixture(self, model_id="synthetic-loader-fixture", cutoff="2026-01-31T00:00:00Z"):
         import lightgbm as lgb
@@ -80,11 +84,67 @@ class WorkflowTests(unittest.TestCase):
 
     def test_missing_model_blocks_without_fabricated_points(self):
         run, _ = self.create(model="missing")
-        self.service.compute_run(run["id"])
+        self.service.process_one()
         result = self.service.get_forecast(run["id"])
         self.assertEqual(result["status"],"BLOCKED")
         self.assertEqual(result["points"],[])
         self.assertEqual(result["points"],[])
+
+    def test_committed_scada_bundle_cpu_fixture_and_cutoff(self):
+        fixture = json.loads((SCADA / "cpu_fixture.json").read_text())
+        bundle = load_bundle(SCADA, "brev-scada-pooled-lgbm-20260201", ReplayContext(parse_timestamp("2026-02-06T00:00:00Z"), 48))
+        actual = [item["normalized_power"] for item in predict(bundle, fixture["input"])]
+        for value, expected in zip(actual, fixture["expected_normalized_power"]):
+            self.assertAlmostEqual(value, expected, delta=fixture["absolute_tolerance"])
+        with self.assertRaisesRegex(ModelBlocked, "future training_cutoff"):
+            load_bundle(SCADA, "brev-scada-pooled-lgbm-20260201", ReplayContext(parse_timestamp("2026-01-31T18:00:00Z"), 24))
+
+    def test_committed_scada_bundle_service_run_records_warning_and_provenance(self):
+        shutil.copytree(SCADA, self.models / "brev-scada-pooled-lgbm-20260201")
+        run, _ = self.create(model="brev-scada-pooled-lgbm-20260201")
+        self.service.process_one()
+        result = self.service.get_forecast(run["id"])
+        self.assertEqual(result["status"], "SUCCEEDED")
+        self.assertEqual(len(result["points"]), 96)
+        self.assertTrue(all(0 <= point["normalized_power"] <= 1 for point in result["points"]))
+        self.assertIn("operational forecast accuracy is unmeasured", result["warnings"][0])
+        audit = self.service.get_audit(run["id"])["details"]
+        self.assertEqual(audit["model_kind"], "scada_lightgbm_v1")
+        self.assertEqual(audit["model_training_cutoff"], "2026-01-31T19:00:00Z")
+        self.assertEqual(audit["model_sha256"], json.loads((SCADA / "metadata.json").read_text())["model_sha256"])
+
+    def test_tampered_scada_model_blocks(self):
+        bundle_dir = self.models / "brev-scada-pooled-lgbm-20260201"
+        shutil.copytree(SCADA, bundle_dir)
+        (bundle_dir / "model.txt").write_text("tampered")
+        run, _ = self.create(model="brev-scada-pooled-lgbm-20260201")
+        self.service.compute_run(run["id"])
+        self.assertIn("SHA-256", self.service.get_forecast(run["id"])["error"])
+
+    def test_tampered_scada_schema_blocks(self):
+        bundle_dir = self.models / "brev-scada-pooled-lgbm-20260201"
+        shutil.copytree(SCADA, bundle_dir)
+        metadata = json.loads((bundle_dir / "feature_schema.json").read_text())
+        metadata["feature_order"] = list(reversed(metadata["feature_order"]))
+        (bundle_dir / "feature_schema.json").write_text(json.dumps(metadata))
+        run, _ = self.create(model="brev-scada-pooled-lgbm-20260201")
+        self.service.compute_run(run["id"])
+        self.assertIn("feature schema", self.service.get_forecast(run["id"])["error"])
+
+    def test_symlinked_scada_member_blocks(self):
+        bundle_dir = self.models / "brev-scada-pooled-lgbm-20260201"
+        shutil.copytree(SCADA, bundle_dir)
+        (bundle_dir / "model.txt").unlink()
+        try:
+            (bundle_dir / "model.txt").symlink_to(Path("/etc/hosts"))
+        except OSError as exc:
+            if os.name == "nt" and getattr(exc, "winerror", None) == 1314:
+                self.skipTest("Windows symlink privilege is unavailable")
+            raise
+        run, _ = self.create(model="brev-scada-pooled-lgbm-20260201")
+        self.service.compute_run(run["id"])
+        self.assertEqual(self.service.get_forecast(run["id"])["status"], "BLOCKED")
+        self.assertIn("escapes registry", self.service.get_forecast(run["id"])["error"])
 
     def test_synthetic_native_bundle_loads_on_cpu_and_enforces_cutoff(self):
         path = self.native_fixture()
@@ -130,7 +190,12 @@ class WorkflowTests(unittest.TestCase):
     def test_symlinked_native_model_blocks(self):
         bundle_dir = self.native_fixture()
         (bundle_dir / "model.txt").unlink()
-        (bundle_dir / "model.txt").symlink_to(Path("/etc/hosts"))
+        try:
+            (bundle_dir / "model.txt").symlink_to(Path("/etc/hosts"))
+        except OSError as exc:
+            if os.name == "nt" and getattr(exc, "winerror", None) == 1314:
+                self.skipTest("Windows symlink privilege is unavailable")
+            raise
         run, _ = self.create(model="synthetic-loader-fixture")
         self.service.compute_run(run["id"])
         self.assertEqual(self.service.get_forecast(run["id"])["status"], "BLOCKED")

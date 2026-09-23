@@ -1,0 +1,8 @@
+{
+  "kind": "gfs_power_curve_v1",
+  "feature_order": [
+    "gfs_wind_speed_100m",
+    "turbine_id"
+  ],
+  "wind_bin_rule": "floor(gfs_wind_speed_100m), turbine-specific median power; unseen bin uses turbine median"
+}

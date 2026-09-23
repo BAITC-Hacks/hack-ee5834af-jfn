@@ -138,13 +138,13 @@ class Store:
                        (row["run_id"],now.isoformat(),"JOB_CLAIMED",json.dumps({"lease_until":lease})))
             return dict(db.execute("SELECT * FROM jobs WHERE id=?", (row["id"],)).fetchone())
 
-    def compute(self, run_id: str, points: list[dict[str, Any]], audit: dict[str, Any]) -> None:
+    def compute(self, run_id: str, points: list[dict[str, Any]], audit: dict[str, Any], warning: str | None = None) -> None:
         timestamp = now_utc()
         with self.tx(immediate=True) as db:
             db.executemany("""INSERT INTO points(run_id,turbine_id,target_start,target_end,normalized_power)
                 VALUES(?,?,?,?,?)""", [(run_id,p["turbine_id"],p["target_start"],p["target_end"],p["normalized_power"]) for p in points])
-            db.execute("UPDATE runs SET status='COMPUTED',updated_at=?,audit_json=? WHERE id=?",
-                       (timestamp,json.dumps(audit,sort_keys=True),run_id))
+            db.execute("UPDATE runs SET status='COMPUTED',warning=?,updated_at=?,audit_json=? WHERE id=?",
+                       (warning,timestamp,json.dumps(audit,sort_keys=True),run_id))
             db.execute("INSERT INTO events(run_id,created_at,type,payload_json) VALUES(?,?,?,?)",
                        (run_id,timestamp,"FORECAST_COMPUTED",json.dumps({"points":len(points)})))
 
