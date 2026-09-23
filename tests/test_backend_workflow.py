@@ -80,7 +80,7 @@ class WorkflowTests(unittest.TestCase):
 
     def test_missing_model_blocks_without_fabricated_points(self):
         run, _ = self.create(model="missing")
-        self.service.process_one()
+        self.service.compute_run(run["id"])
         result = self.service.get_forecast(run["id"])
         self.assertEqual(result["status"],"BLOCKED")
         self.assertEqual(result["points"],[])
@@ -98,7 +98,7 @@ class WorkflowTests(unittest.TestCase):
     def test_native_bundle_blocks_until_feature_adapter_is_registered(self):
         self.native_fixture()
         run, _ = self.create(model="synthetic-loader-fixture")
-        self.service.process_one()
+        self.service.compute_run(run["id"])
         result = self.service.get_forecast(run["id"])
         self.assertEqual(result["status"], "BLOCKED")
         self.assertEqual(result["points"], [])
@@ -108,7 +108,7 @@ class WorkflowTests(unittest.TestCase):
         bundle_dir = self.native_fixture()
         (bundle_dir / "model.txt").write_text("tampered")
         run, _ = self.create(model="synthetic-loader-fixture")
-        self.service.process_one()
+        self.service.compute_run(run["id"])
         self.assertIn("SHA-256", self.service.get_forecast(run["id"])["error"])
 
     def test_tampered_native_schema_blocks(self):
@@ -117,14 +117,14 @@ class WorkflowTests(unittest.TestCase):
         metadata["feature_order"] = list(reversed(metadata["feature_order"]))
         (bundle_dir / "feature_schema.json").write_text(json.dumps(metadata))
         run, _ = self.create(model="synthetic-loader-fixture")
-        self.service.process_one()
+        self.service.compute_run(run["id"])
         self.assertIn("feature schema", self.service.get_forecast(run["id"])["error"])
 
     def test_missing_native_member_blocks(self):
         bundle_dir = self.native_fixture()
         (bundle_dir / "feature_schema.json").unlink()
         run, _ = self.create(model="synthetic-loader-fixture")
-        self.service.process_one()
+        self.service.compute_run(run["id"])
         self.assertEqual(self.service.get_forecast(run["id"])["status"], "BLOCKED")
 
     def test_symlinked_native_model_blocks(self):
@@ -132,7 +132,7 @@ class WorkflowTests(unittest.TestCase):
         (bundle_dir / "model.txt").unlink()
         (bundle_dir / "model.txt").symlink_to(Path("/etc/hosts"))
         run, _ = self.create(model="synthetic-loader-fixture")
-        self.service.process_one()
+        self.service.compute_run(run["id"])
         self.assertEqual(self.service.get_forecast(run["id"])["status"], "BLOCKED")
         self.assertIn("escapes registry", self.service.get_forecast(run["id"])["error"])
 
