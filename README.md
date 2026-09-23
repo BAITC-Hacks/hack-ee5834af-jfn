@@ -10,6 +10,7 @@
 - [План реализации и критерии готовности](docs/implementation-plan.md)
 - [План обучения в NVIDIA Brev](docs/brev-training.md)
 - [Запуск исторического replay погоды](docs/weather-replay.md)
+- [Forecast API, worker и SQLite](docs/backend-api.md)
 - [Исходное обсуждение архитектуры — issue #1](https://github.com/BAITC-Hacks/hack-ee5834af-jfn/issues/1)
 
 ## Ключевые решения
