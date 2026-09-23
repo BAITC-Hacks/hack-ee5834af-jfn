@@ -41,3 +41,5 @@ demo, and `--service-fixture` if a model or input is a service fixture.
 For offline replay of a saved JSON output, pass `--execution recorded
 --trace-file PATH`. Exit code 2 with `--require-live` means real OpenAI publication
 was not demonstrated. The default budget is 10 tool calls and 45 seconds.
+`tests/fixtures/agent-live-smoke-recorded.json` is a saved tool-call trace from
+the `gpt-4.1-mini` smoke, explicitly marked `recorded` and `service_fixture`.

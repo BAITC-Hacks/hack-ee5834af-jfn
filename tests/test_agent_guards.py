@@ -17,6 +17,7 @@ from backend.workflow import ForecastService
 
 
 FIXTURE = Path(__file__).parents[1] / "data/fixtures/noaa-gfs-20260206T000000Z-h48.json"
+RECORDED = Path(__file__).parent / "fixtures/agent-live-smoke-recorded.json"
 
 
 class FakeResponses:
@@ -102,6 +103,22 @@ class AgentGuardTests(unittest.TestCase):
         self.assertTrue(result.published)
         self.assertEqual(self.service.get_run(result.run_id)["weather_snapshot_id"], "previous")
         self.assertIn("injected demo failure", result.trace[0]["outcome"]["reason"])
+
+    def test_saved_live_trace_replays_offline_as_recorded(self):
+        source = json.loads(RECORDED.read_text())
+        self.assertTrue(source["recorded"])
+        self.assertEqual(source["source_execution"], "live_openai")
+        shutil.copyfile(FIXTURE, self.service.snapshot_dir / "gfs-20260205-18z.json")
+        bundle = json.loads((self.service.model_dir / "linear-v1.json").read_text())
+        bundle["model_id"] = "service-fixture-linear-v1"
+        (self.service.model_dir / "service-fixture-linear-v1.json").write_text(json.dumps(bundle))
+        context = RunContext(self.context.as_of, 48, "service-fixture-linear-v1",
+                             ("gfs-fresh-unavailable", "gfs-20260205-18z"))
+        calls = [(entry["tool"], entry["arguments"]) for entry in source["trace"]]
+        result = ForecastOperator(self.service, context,
+                                  unavailable=frozenset({"gfs-fresh-unavailable"})).run_recorded(calls)
+        self.assertEqual(result.execution, "recorded")
+        self.assertTrue(result.published)
 
     def test_critical_temporal_failure_cannot_be_overridden_by_model(self):
         snapshot = json.loads(FIXTURE.read_text())
