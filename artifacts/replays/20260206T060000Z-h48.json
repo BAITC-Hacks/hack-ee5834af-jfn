@@ -1,0 +1,585 @@
+{
+  "as_of": "2026-02-06T06:00:00Z",
+  "horizon_hours": 48,
+  "model_id": "gfs-pooled-lgbm-mvp-20260131",
+  "points": [
+    {
+      "normalized_power": 0.07065178932109334,
+      "target_end": "2026-02-06T07:00:00Z",
+      "target_start": "2026-02-06T06:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.07065178932109334,
+      "target_end": "2026-02-06T07:00:00Z",
+      "target_start": "2026-02-06T06:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.28863161958750594,
+      "target_end": "2026-02-06T08:00:00Z",
+      "target_start": "2026-02-06T07:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.28863161958750594,
+      "target_end": "2026-02-06T08:00:00Z",
+      "target_start": "2026-02-06T07:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.5567212464736363,
+      "target_end": "2026-02-06T09:00:00Z",
+      "target_start": "2026-02-06T08:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.5567212464736363,
+      "target_end": "2026-02-06T09:00:00Z",
+      "target_start": "2026-02-06T08:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.49770488478549685,
+      "target_end": "2026-02-06T10:00:00Z",
+      "target_start": "2026-02-06T09:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.49770488478549685,
+      "target_end": "2026-02-06T10:00:00Z",
+      "target_start": "2026-02-06T09:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.5060005400764718,
+      "target_end": "2026-02-06T11:00:00Z",
+      "target_start": "2026-02-06T10:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.5060005400764718,
+      "target_end": "2026-02-06T11:00:00Z",
+      "target_start": "2026-02-06T10:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.5084807985617936,
+      "target_end": "2026-02-06T12:00:00Z",
+      "target_start": "2026-02-06T11:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.5084807985617936,
+      "target_end": "2026-02-06T12:00:00Z",
+      "target_start": "2026-02-06T11:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.5084807985617936,
+      "target_end": "2026-02-06T13:00:00Z",
+      "target_start": "2026-02-06T12:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.5084807985617936,
+      "target_end": "2026-02-06T13:00:00Z",
+      "target_start": "2026-02-06T12:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.5422140107485991,
+      "target_end": "2026-02-06T14:00:00Z",
+      "target_start": "2026-02-06T13:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.5422140107485991,
+      "target_end": "2026-02-06T14:00:00Z",
+      "target_start": "2026-02-06T13:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.6233365574402852,
+      "target_end": "2026-02-06T15:00:00Z",
+      "target_start": "2026-02-06T14:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.6233365574402852,
+      "target_end": "2026-02-06T15:00:00Z",
+      "target_start": "2026-02-06T14:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.6999255646142338,
+      "target_end": "2026-02-06T16:00:00Z",
+      "target_start": "2026-02-06T15:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.6999255646142338,
+      "target_end": "2026-02-06T16:00:00Z",
+      "target_start": "2026-02-06T15:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.6035033460737922,
+      "target_end": "2026-02-06T17:00:00Z",
+      "target_start": "2026-02-06T16:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.6035033460737922,
+      "target_end": "2026-02-06T17:00:00Z",
+      "target_start": "2026-02-06T16:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.6037346142055211,
+      "target_end": "2026-02-06T18:00:00Z",
+      "target_start": "2026-02-06T17:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.6037346142055211,
+      "target_end": "2026-02-06T18:00:00Z",
+      "target_start": "2026-02-06T17:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.6148996839882199,
+      "target_end": "2026-02-06T19:00:00Z",
+      "target_start": "2026-02-06T18:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.6148996839882199,
+      "target_end": "2026-02-06T19:00:00Z",
+      "target_start": "2026-02-06T18:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.5671342232111685,
+      "target_end": "2026-02-06T20:00:00Z",
+      "target_start": "2026-02-06T19:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.5671342232111685,
+      "target_end": "2026-02-06T20:00:00Z",
+      "target_start": "2026-02-06T19:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.33072038637248546,
+      "target_end": "2026-02-06T21:00:00Z",
+      "target_start": "2026-02-06T20:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.33072038637248546,
+      "target_end": "2026-02-06T21:00:00Z",
+      "target_start": "2026-02-06T20:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.18234796777935902,
+      "target_end": "2026-02-06T22:00:00Z",
+      "target_start": "2026-02-06T21:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.18234796777935902,
+      "target_end": "2026-02-06T22:00:00Z",
+      "target_start": "2026-02-06T21:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.09018980117503779,
+      "target_end": "2026-02-06T23:00:00Z",
+      "target_start": "2026-02-06T22:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.09018980117503779,
+      "target_end": "2026-02-06T23:00:00Z",
+      "target_start": "2026-02-06T22:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.02345486598720567,
+      "target_end": "2026-02-07T00:00:00Z",
+      "target_start": "2026-02-06T23:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.02345486598720567,
+      "target_end": "2026-02-07T00:00:00Z",
+      "target_start": "2026-02-06T23:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.14313015646403596,
+      "target_end": "2026-02-07T01:00:00Z",
+      "target_start": "2026-02-07T00:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.14313015646403596,
+      "target_end": "2026-02-07T01:00:00Z",
+      "target_start": "2026-02-07T00:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.022441795309147014,
+      "target_end": "2026-02-07T02:00:00Z",
+      "target_start": "2026-02-07T01:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.022441795309147014,
+      "target_end": "2026-02-07T02:00:00Z",
+      "target_start": "2026-02-07T01:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.02453928071853637,
+      "target_end": "2026-02-07T03:00:00Z",
+      "target_start": "2026-02-07T02:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.02453928071853637,
+      "target_end": "2026-02-07T03:00:00Z",
+      "target_start": "2026-02-07T02:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.024701511325274976,
+      "target_end": "2026-02-07T04:00:00Z",
+      "target_start": "2026-02-07T03:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.024701511325274976,
+      "target_end": "2026-02-07T04:00:00Z",
+      "target_start": "2026-02-07T03:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.12178776327126979,
+      "target_end": "2026-02-07T05:00:00Z",
+      "target_start": "2026-02-07T04:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.12178776327126979,
+      "target_end": "2026-02-07T05:00:00Z",
+      "target_start": "2026-02-07T04:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.2145998541833057,
+      "target_end": "2026-02-07T06:00:00Z",
+      "target_start": "2026-02-07T05:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.2145998541833057,
+      "target_end": "2026-02-07T06:00:00Z",
+      "target_start": "2026-02-07T05:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.8321608197449657,
+      "target_end": "2026-02-07T07:00:00Z",
+      "target_start": "2026-02-07T06:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.8321608197449657,
+      "target_end": "2026-02-07T07:00:00Z",
+      "target_start": "2026-02-07T06:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.5732531631909616,
+      "target_end": "2026-02-07T08:00:00Z",
+      "target_start": "2026-02-07T07:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.5732531631909616,
+      "target_end": "2026-02-07T08:00:00Z",
+      "target_start": "2026-02-07T07:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.16194464668651862,
+      "target_end": "2026-02-07T09:00:00Z",
+      "target_start": "2026-02-07T08:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.16194464668651862,
+      "target_end": "2026-02-07T09:00:00Z",
+      "target_start": "2026-02-07T08:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.07478292783798132,
+      "target_end": "2026-02-07T10:00:00Z",
+      "target_start": "2026-02-07T09:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.07478292783798132,
+      "target_end": "2026-02-07T10:00:00Z",
+      "target_start": "2026-02-07T09:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.08873798930943846,
+      "target_end": "2026-02-07T11:00:00Z",
+      "target_start": "2026-02-07T10:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.08873798930943846,
+      "target_end": "2026-02-07T11:00:00Z",
+      "target_start": "2026-02-07T10:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.11123708645912563,
+      "target_end": "2026-02-07T12:00:00Z",
+      "target_start": "2026-02-07T11:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.11123708645912563,
+      "target_end": "2026-02-07T12:00:00Z",
+      "target_start": "2026-02-07T11:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.20091324594091536,
+      "target_end": "2026-02-07T13:00:00Z",
+      "target_start": "2026-02-07T12:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.20091324594091536,
+      "target_end": "2026-02-07T13:00:00Z",
+      "target_start": "2026-02-07T12:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.07878063769008081,
+      "target_end": "2026-02-07T14:00:00Z",
+      "target_start": "2026-02-07T13:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.07878063769008081,
+      "target_end": "2026-02-07T14:00:00Z",
+      "target_start": "2026-02-07T13:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.14118805628462425,
+      "target_end": "2026-02-07T15:00:00Z",
+      "target_start": "2026-02-07T14:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.14118805628462425,
+      "target_end": "2026-02-07T15:00:00Z",
+      "target_start": "2026-02-07T14:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.05815168847075487,
+      "target_end": "2026-02-07T16:00:00Z",
+      "target_start": "2026-02-07T15:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.05815168847075487,
+      "target_end": "2026-02-07T16:00:00Z",
+      "target_start": "2026-02-07T15:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.2083548616223369,
+      "target_end": "2026-02-07T17:00:00Z",
+      "target_start": "2026-02-07T16:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.2083548616223369,
+      "target_end": "2026-02-07T17:00:00Z",
+      "target_start": "2026-02-07T16:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.21120285598154387,
+      "target_end": "2026-02-07T18:00:00Z",
+      "target_start": "2026-02-07T17:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.21120285598154387,
+      "target_end": "2026-02-07T18:00:00Z",
+      "target_start": "2026-02-07T17:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.2677927242065537,
+      "target_end": "2026-02-07T19:00:00Z",
+      "target_start": "2026-02-07T18:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.2677927242065537,
+      "target_end": "2026-02-07T19:00:00Z",
+      "target_start": "2026-02-07T18:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.13544191881437936,
+      "target_end": "2026-02-07T20:00:00Z",
+      "target_start": "2026-02-07T19:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.13544191881437936,
+      "target_end": "2026-02-07T20:00:00Z",
+      "target_start": "2026-02-07T19:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.5051320958872153,
+      "target_end": "2026-02-07T21:00:00Z",
+      "target_start": "2026-02-07T20:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.5051320958872153,
+      "target_end": "2026-02-07T21:00:00Z",
+      "target_start": "2026-02-07T20:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.4349277590397794,
+      "target_end": "2026-02-07T22:00:00Z",
+      "target_start": "2026-02-07T21:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.4349277590397794,
+      "target_end": "2026-02-07T22:00:00Z",
+      "target_start": "2026-02-07T21:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.4504519373039101,
+      "target_end": "2026-02-07T23:00:00Z",
+      "target_start": "2026-02-07T22:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.4504519373039101,
+      "target_end": "2026-02-07T23:00:00Z",
+      "target_start": "2026-02-07T22:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.6091324968067116,
+      "target_end": "2026-02-08T00:00:00Z",
+      "target_start": "2026-02-07T23:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.6091324968067116,
+      "target_end": "2026-02-08T00:00:00Z",
+      "target_start": "2026-02-07T23:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.3048619887053765,
+      "target_end": "2026-02-08T01:00:00Z",
+      "target_start": "2026-02-08T00:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.3048619887053765,
+      "target_end": "2026-02-08T01:00:00Z",
+      "target_start": "2026-02-08T00:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.2760561876292621,
+      "target_end": "2026-02-08T02:00:00Z",
+      "target_start": "2026-02-08T01:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.2760561876292621,
+      "target_end": "2026-02-08T02:00:00Z",
+      "target_start": "2026-02-08T01:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.2451683029667444,
+      "target_end": "2026-02-08T03:00:00Z",
+      "target_start": "2026-02-08T02:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.2451683029667444,
+      "target_end": "2026-02-08T03:00:00Z",
+      "target_start": "2026-02-08T02:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.3374472069549252,
+      "target_end": "2026-02-08T04:00:00Z",
+      "target_start": "2026-02-08T03:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.3374472069549252,
+      "target_end": "2026-02-08T04:00:00Z",
+      "target_start": "2026-02-08T03:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.08701070652092029,
+      "target_end": "2026-02-08T05:00:00Z",
+      "target_start": "2026-02-08T04:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.08701070652092029,
+      "target_end": "2026-02-08T05:00:00Z",
+      "target_start": "2026-02-08T04:00:00Z",
+      "turbine_id": "T2"
+    },
+    {
+      "normalized_power": 0.145657684699507,
+      "target_end": "2026-02-08T06:00:00Z",
+      "target_start": "2026-02-08T05:00:00Z",
+      "turbine_id": "T1"
+    },
+    {
+      "normalized_power": 0.145657684699507,
+      "target_end": "2026-02-08T06:00:00Z",
+      "target_start": "2026-02-08T05:00:00Z",
+      "turbine_id": "T2"
+    }
+  ],
+  "run_id": "56c44e0d-4fec-5c3d-996a-555fb475a337",
+  "weather_snapshot_sha256": "f2d28bfee00b0b0af03709a133171351d13a32c90ec09c7a6deff50fee2ed2cb"
+}
