@@ -4,10 +4,10 @@ import App from './App';
 import { formatForecastTime } from './time';
 
 describe('dashboard', () => {
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
   it('clearly labels demo values and both turbine series', async () => {
     render(<App />);
-    expect(screen.getByText(/^Sample data$/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/^Sample data$/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/interface preview only/i)).toBeInTheDocument();
     expect(await screen.findByLabelText(/Forecast lines for Turbine 1 and Turbine 2/i)).toBeInTheDocument();
     expect(screen.getByText(/Actuals and confidence intervals are unavailable/i)).toBeInTheDocument();
@@ -21,7 +21,7 @@ describe('dashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: /Run forecast/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/No sample data was substituted/i);
     expect(screen.queryByText(/Power forecast/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/Backend · error/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Backend ·/i)).not.toBeInTheDocument();
   });
 
   it('clears an in-flight API run when the source changes', async () => {
@@ -41,5 +41,16 @@ describe('dashboard', () => {
 
   it('formats chart hours in the replay timezone with a date', () => {
     expect(formatForecastTime('2026-02-05T20:00:00.000Z')).toMatch(/06 Feb, 01:00/i);
+  });
+
+  it('switches the full interface to Kazakh from the language menu', async () => {
+    render(<App />);
+    await screen.findByText('Power forecast');
+    fireEvent.click(screen.getByRole('button', { name: 'Language' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Қазақша/i }));
+    expect(screen.getByRole('link', { name: 'Бақылау тақтасы' })).toHaveClass('active');
+    expect(screen.getByRole('button', { name: /Болжамды іске қосу/i })).toBeInTheDocument();
+    expect(await screen.findByText('Қуат болжамы')).toBeInTheDocument();
+    expect(localStorage.getItem('wind-language')).toBe('kk');
   });
 });
