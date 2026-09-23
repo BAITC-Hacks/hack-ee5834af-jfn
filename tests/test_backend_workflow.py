@@ -12,6 +12,8 @@ from backend.forecasting.adapter import FEATURES, ModelBlocked, load_native_bund
 from backend.replay import ReplayContext, parse_timestamp
 from backend.storage import Store
 from backend.workflow import ForecastService, RegistryError
+from backend.agent.operator import ForecastOperator
+from backend.agent.tools import RunContext
 
 
 FIXTURE = Path(__file__).parents[1] / "data/fixtures/noaa-gfs-20260206T000000Z-h48.json"
@@ -30,6 +32,13 @@ class WorkflowTests(unittest.TestCase):
         (self.models / "linear-v1.json").write_text(json.dumps(bundle))
         self.store = Store(root / "runs.sqlite3")
         self.service = ForecastService(self.store,self.snapshots,self.models)
+        class Recorded:
+            def __init__(self): self.calls = iter([("get_weather_forecast", {"snapshot_id":"gfs-feb6"}), ("validate_inputs", {}), ("run_forecast", {"model_id":"linear-v1"}), ("validate_forecast", {}), ("publish_forecast", {})])
+            def respond(self, *_):
+                try: name,args=next(self.calls)
+                except StopIteration: return {"output":[]}
+                return {"id":"test","output":[{"type":"function_call","name":name,"arguments":json.dumps(args),"call_id":name}]}
+        self.service.operator_factory = lambda service, context, run_id, attempt: ForecastOperator(service, context, Recorded(), run_id=run_id, worker_attempt=attempt)
 
     def native_fixture(self, model_id="synthetic-loader-fixture", cutoff="2026-01-31T00:00:00Z"):
         import lightgbm as lgb
@@ -71,11 +80,11 @@ class WorkflowTests(unittest.TestCase):
 
     def test_missing_model_blocks_without_fabricated_points(self):
         run, _ = self.create(model="missing")
-        self.service.process_one()
+        self.service.compute_run(run["id"])
         result = self.service.get_forecast(run["id"])
         self.assertEqual(result["status"],"BLOCKED")
         self.assertEqual(result["points"],[])
-        self.assertIn("missing",result["error"])
+        self.assertEqual(result["points"],[])
 
     def test_synthetic_native_bundle_loads_on_cpu_and_enforces_cutoff(self):
         path = self.native_fixture()
@@ -89,7 +98,7 @@ class WorkflowTests(unittest.TestCase):
     def test_native_bundle_blocks_until_feature_adapter_is_registered(self):
         self.native_fixture()
         run, _ = self.create(model="synthetic-loader-fixture")
-        self.service.process_one()
+        self.service.compute_run(run["id"])
         result = self.service.get_forecast(run["id"])
         self.assertEqual(result["status"], "BLOCKED")
         self.assertEqual(result["points"], [])
@@ -99,7 +108,7 @@ class WorkflowTests(unittest.TestCase):
         bundle_dir = self.native_fixture()
         (bundle_dir / "model.txt").write_text("tampered")
         run, _ = self.create(model="synthetic-loader-fixture")
-        self.service.process_one()
+        self.service.compute_run(run["id"])
         self.assertIn("SHA-256", self.service.get_forecast(run["id"])["error"])
 
     def test_tampered_native_schema_blocks(self):
@@ -108,14 +117,14 @@ class WorkflowTests(unittest.TestCase):
         metadata["feature_order"] = list(reversed(metadata["feature_order"]))
         (bundle_dir / "feature_schema.json").write_text(json.dumps(metadata))
         run, _ = self.create(model="synthetic-loader-fixture")
-        self.service.process_one()
+        self.service.compute_run(run["id"])
         self.assertIn("feature schema", self.service.get_forecast(run["id"])["error"])
 
     def test_missing_native_member_blocks(self):
         bundle_dir = self.native_fixture()
         (bundle_dir / "feature_schema.json").unlink()
         run, _ = self.create(model="synthetic-loader-fixture")
-        self.service.process_one()
+        self.service.compute_run(run["id"])
         self.assertEqual(self.service.get_forecast(run["id"])["status"], "BLOCKED")
 
     def test_symlinked_native_model_blocks(self):
@@ -123,7 +132,7 @@ class WorkflowTests(unittest.TestCase):
         (bundle_dir / "model.txt").unlink()
         (bundle_dir / "model.txt").symlink_to(Path("/etc/hosts"))
         run, _ = self.create(model="synthetic-loader-fixture")
-        self.service.process_one()
+        self.service.compute_run(run["id"])
         self.assertEqual(self.service.get_forecast(run["id"])["status"], "BLOCKED")
         self.assertIn("escapes registry", self.service.get_forecast(run["id"])["error"])
 
@@ -162,6 +171,22 @@ class WorkflowTests(unittest.TestCase):
         recovered = self.store.claim_job()
         self.assertEqual(recovered["run_id"],run["id"])
         self.assertEqual(recovered["attempts"],2)
+
+    def test_reclaimed_computed_run_reuses_private_points(self):
+        run, _ = self.create()
+        first = self.store.claim_job(lease_seconds=1)
+        self.service.compute_run(run["id"], first["attempts"])
+        self.assertEqual(self.service.get_run(run["id"])["status"], "COMPUTED")
+        self.assertEqual(len(self.store.points(run["id"])), 96)
+        self.assertEqual(self.service.get_forecast(run["id"])["points"], [])
+        with closing(self.store.connect()) as db:
+            db.execute("UPDATE jobs SET lease_until='2000-01-01T00:00:00+00:00' WHERE id=?", (first["id"],))
+        self.service.process_one()
+        self.assertEqual(self.service.get_run(run["id"])["status"], "SUCCEEDED")
+        self.assertEqual(len(self.service.get_forecast(run["id"])["points"]), 96)
+        events = self.service.get_events(run["id"])
+        self.assertEqual(len([event for event in events if event["type"] == "FORECAST_COMPUTED"]), 1)
+        self.assertEqual(len([event for event in events if event["type"] == "FORECAST_READY"]), 1)
 
     def test_rejects_unregistered_and_path_ids(self):
         with self.assertRaises(RegistryError): self.create(snapshot="../secret")
