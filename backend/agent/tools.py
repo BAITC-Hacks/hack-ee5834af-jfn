@@ -89,9 +89,14 @@ class AgentTools:
         self.trace: list[dict[str, Any]] = []
         self._persisted = 0
 
-    def _record(self, name: str, arguments: dict[str, Any], outcome: dict[str, Any]) -> None:
+    def _record(self, name: str, arguments: dict[str, Any], outcome: dict[str, Any],
+                call_id: str | None = None, response_id: str | None = None) -> None:
         entry = {"type": "AGENT_TOOL_CALL", "tool": name, "arguments": arguments,
                  "outcome": outcome, "created_at": datetime.now(timezone.utc).isoformat()}
+        if call_id is not None:
+            entry["call_id"] = call_id
+        if response_id is not None:
+            entry["response_id"] = response_id
         self.trace.append(entry)
         self._flush()
 
@@ -114,19 +119,20 @@ class AgentTools:
                            "created_at": datetime.now(timezone.utc).isoformat()})
         self._flush()
 
-    def invoke(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
+    def invoke(self, name: str, args: dict[str, Any], *, call_id: str | None = None,
+               response_id: str | None = None) -> dict[str, Any]:
         allowed = {"get_weather_forecast": {"snapshot_id"}, "validate_inputs": set(),
                    "run_forecast": {"model_id"}, "validate_forecast": set(),
                    "publish_forecast": set(), "request_recalculation": {"reason"}}
         if name not in allowed or set(args) != allowed[name]:
             outcome = {"ok": False, "reason": "invalid tool or arguments"}
-            self._record(name, {}, outcome)
+            self._record(name, {}, outcome, call_id, response_id)
             return outcome
         try:
             outcome = getattr(self, name)(**args)
         except (ValueError, RuntimeError, KeyError, TypeError) as exc:
             outcome = {"ok": False, "reason": str(exc)[:300]}
-        self._record(name, args, outcome)
+        self._record(name, args, outcome, call_id, response_id)
         return outcome
 
     def get_weather_forecast(self, snapshot_id: str) -> dict[str, Any]:

@@ -117,7 +117,9 @@ class ForecastOperator:
                             arguments = {}
                     except (KeyError, TypeError, json.JSONDecodeError):
                         arguments = {}
-                    outcome = tools.invoke(str(call.get("name", "")), arguments)
+                    outcome = tools.invoke(str(call.get("name", "")), arguments,
+                                           call_id=call["call_id"],
+                                           response_id=response.get("id"))
                     input_items.append({"type": "function_call_output",
                                         "call_id": call["call_id"],
                                         "output": json.dumps(outcome, sort_keys=True)})

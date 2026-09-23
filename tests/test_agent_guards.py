@@ -27,7 +27,8 @@ class FakeResponses:
             name, args = next(self.names)
         except StopIteration:
             return {"output": [{"type": "message", "content": []}]}
-        return {"output": [{"type": "function_call", "name": name,
+        return {"id": f"response-{self.calls}",
+                "output": [{"type": "function_call", "name": name,
                             "arguments": json.dumps(args), "call_id": f"call-{self.calls}"}]}
 
 
@@ -71,6 +72,8 @@ class AgentGuardTests(unittest.TestCase):
         self.assertEqual(len(result.forecast["points"]), 96)
         self.assertEqual([e["tool"] for e in result.trace if e["type"] == "AGENT_TOOL_CALL"],
                          [n for n, _ in self.sequence()])
+        self.assertEqual(result.trace[0]["call_id"], "call-1")
+        self.assertEqual(result.trace[0]["response_id"], "response-1")
         self.assertTrue(all("normalized_power" not in json.dumps(e) for e in result.trace))
         events = self.service.get_events(result.run_id)
         self.assertEqual(len([e for e in events if e["type"] == "AGENT_TOOL_CALL"]), 5)
