@@ -9,9 +9,9 @@
 .language-trigger{display:grid;place-items:center;font-size:inherit}.language-trigger svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
 .sidebar{min-width:0}
 @media(max-width:760px){.app-shell{grid-template-columns:minmax(0,1fr)}.sidebar{overflow:hidden}.sidebar nav{width:100%;max-width:100%}}
-.app-shell{display:block;min-height:100vh;padding:18px;background:#eef1f5}
-.app-header{position:relative;z-index:10;min-height:68px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:44px;padding:0 24px;border:1px solid #dedfe4;border-bottom-color:#d5d6dc;border-radius:16px 16px 0 0;background:#fff;box-shadow:0 2px 10px rgba(31,35,48,.05)}
+.app-shell{display:block;min-height:100vh;background:#f8f9fa}
+.app-header{position:relative;z-index:10;min-height:68px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:44px;padding:0 28px;border-bottom:1px solid #d5d6dc;background:#fff}
 .app-header .brand div span{display:none}.app-header nav{display:flex;align-self:stretch;gap:32px;overflow-x:auto}.app-header nav a{position:relative;display:flex;align-items:center;color:#56565c;font-size:13px;font-weight:550;text-decoration:none;white-space:nowrap}.app-header nav a.active{color:#16866d}.app-header nav a.active:after{content:'';position:absolute;right:0;bottom:0;left:0;height:2px;border-radius:2px;background:#16866d}
-.workspace{min-width:0;border:1px solid #dedfe4;border-top:0;border-radius:0 0 16px 16px;background:#f8f9fa;box-shadow:0 18px 50px rgba(31,35,48,.09)}
+.workspace{min-width:0;background:#f8f9fa}
 .dashboard-content{max-width:1600px;margin:0 auto;padding:22px}
 @media(max-width:760px){.app-shell{padding:0}.app-header{min-height:62px;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;padding:0 12px;border-width:0 0 1px;border-radius:0}.app-header .brand div{display:none}.app-header nav{gap:22px}.app-header nav a{font-size:12px}.workspace{border:0;border-radius:0;box-shadow:none}.dashboard-content{padding:12px}}
