@@ -1,0 +1,55 @@
+{
+  "model_id": "gfs-extended-selected-20260131",
+  "kind": "gfs_power_curve_v1",
+  "training_cutoff": "2026-01-30T18:00:00Z",
+  "feature_order": [
+    "gfs_wind_speed_100m",
+    "turbine_id"
+  ],
+  "source_weather_provider": "noaa_gfs",
+  "source_weather_model": "GFS 0.25-degree",
+  "supported_forecast_horizon_hours": 48,
+  "source_timezone": "Asia/Almaty",
+  "origin_schedule": {
+    "start_inclusive": "2025-08-04T06:00:00+00:00",
+    "end_exclusive": "2026-01-27T06:00:00+00:00",
+    "step_days": null,
+    "hour_utc": 6,
+    "horizon_hours": 48,
+    "selection": "explicit_historical_subset",
+    "selected_origins": [
+      "2025-08-04T06:00:00Z",
+      "2025-08-05T06:00:00Z",
+      "2025-08-06T06:00:00Z",
+      "2025-08-11T06:00:00Z",
+      "2025-08-18T06:00:00Z",
+      "2025-08-25T06:00:00Z",
+      "2025-09-01T06:00:00Z",
+      "2025-09-08T06:00:00Z",
+      "2025-11-10T06:00:00Z",
+      "2025-12-01T06:00:00Z",
+      "2025-12-02T06:00:00Z",
+      "2025-12-03T06:00:00Z",
+      "2025-12-04T06:00:00Z",
+      "2025-12-05T06:00:00Z",
+      "2026-01-05T06:00:00Z",
+      "2026-01-06T06:00:00Z",
+      "2026-01-07T06:00:00Z",
+      "2026-01-08T06:00:00Z",
+      "2026-01-09T06:00:00Z",
+      "2026-01-10T06:00:00Z",
+      "2026-01-12T06:00:00Z",
+      "2026-01-19T06:00:00Z",
+      "2026-01-26T06:00:00Z"
+    ]
+  },
+  "target_aggregation": "mean of six valid 10-minute power readings",
+  "model_sha256": "1614e25e62aedb24ae1ff3faaa2ede2c8566ad29ccda7398d38c812bee792853",
+  "limitations": [
+    "Retrospective archived GFS evaluation; artifact was trained later.",
+    "SCADA publication latency is unknown; primary assumption is zero hours.",
+    "January metrics describe the pre-refit candidate, not the exported refit bundle.",
+    "No February SCADA labels were provided; February accuracy is unknown.",
+    "Stops and curtailment cannot be conclusively classified from supplied CSV columns."
+  ]
+}

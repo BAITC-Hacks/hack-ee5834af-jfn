@@ -1,0 +1,20 @@
+{
+  "training_cutoff": "2026-01-30T18:00:00Z",
+  "first_required_origin": "2026-01-31T06:00:00Z",
+  "model_sha256": "1614e25e62aedb24ae1ff3faaa2ede2c8566ad29ccda7398d38c812bee792853",
+  "dataset_sha256": "24b38a54b04adb71d981c008a29dd8cec4a49b40735e6f14a804675ff4f8e66c",
+  "source_manifest_sha256": "cbdda8de38ba1ba71e75727c3e1855d81611957979c505bb232740939e62055b",
+  "scada_csv_sha256": {
+    "T1": "c4c341582fb2dd348b7187f0128cff265fe055f469413871ebb5db50eef58b5b",
+    "T2": "820578cd18bb557cd30c2e102f3ae5a386dfc6c489a5a15743339c2b017305e5"
+  },
+  "refit_rows": 2208,
+  "refit_origins": 23,
+  "limitations": [
+    "Retrospective archived GFS evaluation; artifact was trained later.",
+    "SCADA publication latency is unknown; primary assumption is zero hours.",
+    "January metrics describe the pre-refit candidate, not the exported refit bundle.",
+    "No February SCADA labels were provided; February accuracy is unknown.",
+    "Stops and curtailment cannot be conclusively classified from supplied CSV columns."
+  ]
+}

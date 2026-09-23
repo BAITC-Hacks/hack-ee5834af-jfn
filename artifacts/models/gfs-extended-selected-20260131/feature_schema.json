@@ -1,0 +1,17 @@
+{
+  "kind": "gfs_power_curve_v1",
+  "feature_order": [
+    "gfs_wind_speed_100m",
+    "turbine_id"
+  ],
+  "forecast_fields": [
+    "gfs_wind_u_100m",
+    "gfs_wind_v_100m",
+    "gfs_wind_speed_100m",
+    "gfs_wind_u_10m",
+    "gfs_wind_v_10m",
+    "gfs_wind_speed_10m",
+    "gfs_temperature_2m"
+  ],
+  "weather_semantics": "instantaneous GFS at target_start; power is following-hour mean"
+}
