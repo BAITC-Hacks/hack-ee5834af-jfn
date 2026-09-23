@@ -1,0 +1,147 @@
+{
+  "metrics_kind": "archived_operational_gfs_retrospective_validation",
+  "split": {
+    "validation_start": "2026-01-01T00:00:00Z",
+    "final_cutoff": "2026-01-30T18:00:00Z",
+    "purge_rule": "training labels available by validation_start; validation labels available by final_cutoff",
+    "train_rows": 672,
+    "validation_rows": 384,
+    "final_rows": 1056,
+    "train_origins": 7,
+    "validation_origins": 4,
+    "train_max_label_available_at": "2025-11-12T06:00:00+00:00",
+    "validation_max_label_available_at": "2026-01-28T06:00:00+00:00",
+    "validation_key_sha256": "4896a2d18412bdc3ffd3895b991fe0cd1aad43f1b2d6d7c4a53efaf21d4abb43",
+    "purged_train_rows": 0,
+    "excluded_validation_late_labels": 0
+  },
+  "validation_origin_min": "2026-01-05T06:00:00Z",
+  "validation_origin_max": "2026-01-26T06:00:00Z",
+  "candidate_validation": {
+    "power_curve_gfs": {
+      "overall": {
+        "rows": 384,
+        "mae": 0.20439236111111111,
+        "rmse": 0.27390296361669625,
+        "r2": 0.4502775357454173,
+        "r2_reason": null
+      },
+      "turbine_1": {
+        "rows": 192,
+        "mae": 0.20811197916666666,
+        "rmse": 0.27721657067065475,
+        "r2": 0.4369242082165079,
+        "r2_reason": null
+      },
+      "turbine_2": {
+        "rows": 192,
+        "mae": 0.20067274305555557,
+        "rmse": 0.27054877545762496,
+        "r2": 0.46361180512749733,
+        "r2_reason": null
+      },
+      "forecast_hour_1_6": {
+        "rows": 48,
+        "mae": 0.18067708333333332,
+        "rmse": 0.26441822823189837,
+        "r2": 0.09172658487386265,
+        "r2_reason": null
+      },
+      "forecast_hour_7_12": {
+        "rows": 48,
+        "mae": 0.24784722222222225,
+        "rmse": 0.2899727597359602,
+        "r2": -0.6681218895134857,
+        "r2_reason": null
+      },
+      "forecast_hour_13_24": {
+        "rows": 96,
+        "mae": 0.23905381944444445,
+        "rmse": 0.30613862061935637,
+        "r2": 0.3048058719531396,
+        "r2_reason": null
+      },
+      "forecast_hour_25_36": {
+        "rows": 96,
+        "mae": 0.1756944444444444,
+        "rmse": 0.27016466600808337,
+        "r2": 0.6290720807828223,
+        "r2_reason": null
+      },
+      "forecast_hour_37_48": {
+        "rows": 96,
+        "mae": 0.18855902777777775,
+        "rmse": 0.23744669236054425,
+        "r2": 0.5949319538329176,
+        "r2_reason": null
+      }
+    },
+    "pooled_gfs_lightgbm": {
+      "overall": {
+        "rows": 384,
+        "mae": 0.24719889966543915,
+        "rmse": 0.29769943571168156,
+        "r2": 0.3506093297011672,
+        "r2_reason": null
+      },
+      "turbine_1": {
+        "rows": 192,
+        "mae": 0.24536393029154266,
+        "rmse": 0.2975732912813399,
+        "r2": 0.35119172594208903,
+        "r2_reason": null
+      },
+      "turbine_2": {
+        "rows": 192,
+        "mae": 0.24903386903933566,
+        "rmse": 0.2978255267133731,
+        "r2": 0.35000217572222925,
+        "r2_reason": null
+      },
+      "forecast_hour_1_6": {
+        "rows": 48,
+        "mae": 0.14373660423524978,
+        "rmse": 0.1790195239761167,
+        "r2": 0.5836729617398115,
+        "r2_reason": null
+      },
+      "forecast_hour_7_12": {
+        "rows": 48,
+        "mae": 0.22382765314911138,
+        "rmse": 0.25739587756049287,
+        "r2": -0.3143667121990179,
+        "r2_reason": null
+      },
+      "forecast_hour_13_24": {
+        "rows": 96,
+        "mae": 0.27066317486917985,
+        "rmse": 0.30656563567079514,
+        "r2": 0.3028651472512335,
+        "r2_reason": null
+      },
+      "forecast_hour_25_36": {
+        "rows": 96,
+        "mae": 0.2944597497596206,
+        "rmse": 0.34381814239134056,
+        "r2": 0.3992552202703096,
+        "r2_reason": null
+      },
+      "forecast_hour_37_48": {
+        "rows": 96,
+        "mae": 0.2398905453407755,
+        "rmse": 0.30521483942570327,
+        "r2": 0.3307212644015449,
+        "r2_reason": null
+      }
+    }
+  },
+  "selection_rule": "lowest overall validation MAE; baseline wins exact tie",
+  "validation_winner": "power_curve_gfs",
+  "scada_weather_conditional_reference": {
+    "mae": 0.030807364773109743,
+    "warning": "Different validation population and observed target-time weather; not operational forecast accuracy or a like-for-like winner candidate."
+  },
+  "exported_model": "pooled_gfs_lightgbm",
+  "exported_model_refit": true,
+  "exported_model_has_independent_holdout_score": false
+}

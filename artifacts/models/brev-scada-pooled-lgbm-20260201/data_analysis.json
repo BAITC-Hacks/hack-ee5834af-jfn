@@ -1,0 +1,90 @@
+{
+  "turbine_1": {
+    "file": "turbine_1.csv",
+    "sha256": "c4c341582fb2dd348b7187f0128cff265fe055f469413871ebb5db50eef58b5b",
+    "raw_rows": 142360,
+    "source_columns": [
+      "ID",
+      "Нормализованная активная мощность",
+      "Средняя скорость ветра(m/s)",
+      "Средняя температура окружающей среды(°C)",
+      "Статистическое время"
+    ],
+    "source_timezone": "Asia/Almaty",
+    "ambiguous_or_nonexistent_local_timestamp_rows": 6,
+    "timestamp_policy": "aggregate and split in source-clock time; ambiguous historical UTC instants are not inferred",
+    "missing_by_column": {
+      "timestamp": 0,
+      "wind_speed": 0,
+      "temperature": 0,
+      "power": 0
+    },
+    "duplicate_timestamp_groups": 0,
+    "conflicting_duplicate_groups": 0,
+    "identical_duplicate_groups": 0,
+    "conflicting_duplicate_rows_excluded": 0,
+    "excluded_row_reasons": {
+      "missing_measurement": 0,
+      "wind_out_of_range": 0,
+      "power_out_of_range": 0,
+      "temperature_out_of_range": 0,
+      "off_grid": 0
+    },
+    "unique_rejected_rows": 0,
+    "off_grid_hours": 0,
+    "identical_duplicate_extra_rows_removed": 0,
+    "first_timestamp": "2023-03-11T00:00:00",
+    "last_timestamp": "2026-01-31T23:50:00",
+    "gaps_over_10_minutes": 67,
+    "longest_gap_hours": 999.0,
+    "wind_speed_max_observed_mps": 22.97,
+    "hour_slots": 25392,
+    "tainted_hours": 0,
+    "incomplete_or_tainted_hours": 1725,
+    "retained_hours": 23667
+  },
+  "turbine_2": {
+    "file": "turbine_2.csv",
+    "sha256": "820578cd18bb557cd30c2e102f3ae5a386dfc6c489a5a15743339c2b017305e5",
+    "raw_rows": 149499,
+    "source_columns": [
+      "ID",
+      "Нормализованная активная мощность",
+      "Средняя скорость ветра(m/s)",
+      "Средняя температура окружающей среды(°C)",
+      "Статистическое время"
+    ],
+    "source_timezone": "Asia/Almaty",
+    "ambiguous_or_nonexistent_local_timestamp_rows": 6,
+    "timestamp_policy": "aggregate and split in source-clock time; ambiguous historical UTC instants are not inferred",
+    "missing_by_column": {
+      "timestamp": 0,
+      "wind_speed": 0,
+      "temperature": 0,
+      "power": 0
+    },
+    "duplicate_timestamp_groups": 0,
+    "conflicting_duplicate_groups": 0,
+    "identical_duplicate_groups": 0,
+    "conflicting_duplicate_rows_excluded": 0,
+    "excluded_row_reasons": {
+      "missing_measurement": 0,
+      "wind_out_of_range": 0,
+      "power_out_of_range": 0,
+      "temperature_out_of_range": 0,
+      "off_grid": 0
+    },
+    "unique_rejected_rows": 0,
+    "off_grid_hours": 0,
+    "identical_duplicate_extra_rows_removed": 0,
+    "first_timestamp": "2023-03-11T00:00:00",
+    "last_timestamp": "2026-01-31T23:50:00",
+    "gaps_over_10_minutes": 178,
+    "longest_gap_hours": 57.5,
+    "wind_speed_max_observed_mps": 21.43,
+    "hour_slots": 25392,
+    "tainted_hours": 0,
+    "incomplete_or_tainted_hours": 607,
+    "retained_hours": 24785
+  }
+}

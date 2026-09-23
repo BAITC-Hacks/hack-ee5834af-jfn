@@ -110,6 +110,8 @@ The project deliberately separates two different questions:
 
 Only the second is representative of the production forecasting scenario.
 
+The first archived-GFS experiment uses 11 historical origins and 1,056 labeled rows. On four January 2026 validation origins (384 identical rows), the GFS power-curve baseline achieved MAE **0.2044**, outperforming the GFS-trained LightGBM at **0.2472**. The baseline bundle is recommended for 06:00 UTC, 48-hour runs; the LightGBM remains experimental. This sparse retrospective result should not be confused with the earlier SCADA-weather MAE of 0.0308 or with unmeasured February accuracy.
+
 The evaluation pipeline therefore uses chronological forecast origins, preserves the forecast horizon, and prevents future labels or weather observations from entering predictor features.
 
 > [!NOTE]
@@ -311,6 +313,7 @@ Python · FastAPI · LightGBM · NOAA GFS · ecCodes · SQLite · React · TypeS
 - [Weather replay](docs/weather-replay.md)
 - [Backend API](docs/backend-api.md)
 - [Brev training plan](docs/brev-training.md)
+- [Archived-GFS training and validation](docs/gfs-training.md)
 
 ---
 

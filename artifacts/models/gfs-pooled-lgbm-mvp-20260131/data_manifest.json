@@ -1,0 +1,29 @@
+{
+  "dataset_sha256": "888e4a0d52fb9454a334b8f52d8ddde6d9cdae0b4610a1dd423c27599d6f3cc5",
+  "source_manifest_sha256": "978d64b626dfec699aae370341fa9089920a5300fa21a37ef5b99cc32252e672",
+  "model_sha256": "27c7ec7363c82bfedca92055d5ea7c410b26e74901d911ce314753d7d947b135",
+  "training_cutoff": "2026-01-30T18:00:00Z",
+  "first_required_origin": "2026-01-31T06:00:00Z",
+  "split": {
+    "validation_start": "2026-01-01T00:00:00Z",
+    "final_cutoff": "2026-01-30T18:00:00Z",
+    "purge_rule": "training labels available by validation_start; validation labels available by final_cutoff",
+    "train_rows": 672,
+    "validation_rows": 384,
+    "final_rows": 1056,
+    "train_origins": 7,
+    "validation_origins": 4,
+    "train_max_label_available_at": "2025-11-12T06:00:00+00:00",
+    "validation_max_label_available_at": "2026-01-28T06:00:00+00:00",
+    "validation_key_sha256": "4896a2d18412bdc3ffd3895b991fe0cd1aad43f1b2d6d7c4a53efaf21d4abb43",
+    "purged_train_rows": 0,
+    "excluded_validation_late_labels": 0
+  },
+  "limitations": [
+    "Retrospective point-in-time simulation; model was trained after historical origins.",
+    "SCADA publication delay is unverified and currently assumed zero.",
+    "Sparse weekly forecast origins and nearest GFS grid point about 12 km from turbines."
+  ],
+  "source_origins_complete": 11,
+  "source_gfs_cycles": 11
+}

@@ -1,0 +1,42 @@
+{
+  "model_id": "gfs-power-curve-mvp-20260131",
+  "kind": "gfs_power_curve_v1",
+  "training_cutoff": "2026-01-30T18:00:00Z",
+  "feature_order": [
+    "gfs_wind_speed_100m",
+    "turbine_id"
+  ],
+  "source_weather_provider": "noaa_gfs",
+  "source_weather_model": "GFS 0.25-degree",
+  "supported_forecast_horizon_hours": 48,
+  "source_timezone": "Asia/Almaty",
+  "origin_schedule": {
+    "start_inclusive": "2025-08-04T06:00:00+00:00",
+    "end_exclusive": "2026-01-27T06:00:00+00:00",
+    "step_days": null,
+    "hour_utc": 6,
+    "horizon_hours": 48,
+    "selection": "explicit_historical_subset",
+    "selected_origins": [
+      "2025-08-04T06:00:00Z",
+      "2025-08-11T06:00:00Z",
+      "2025-08-18T06:00:00Z",
+      "2025-08-25T06:00:00Z",
+      "2025-09-01T06:00:00Z",
+      "2025-09-08T06:00:00Z",
+      "2025-11-10T06:00:00Z",
+      "2026-01-05T06:00:00Z",
+      "2026-01-12T06:00:00Z",
+      "2026-01-19T06:00:00Z",
+      "2026-01-26T06:00:00Z"
+    ]
+  },
+  "target_aggregation": "mean of six valid 10-minute power readings",
+  "model_sha256": "1636060da0529e803049bd41bf195a7de41167f4e47982e731ad142beec8a9aa",
+  "limitations": [
+    "Retrospective point-in-time simulation; artifact did not exist at historical origins.",
+    "Validated on four sparse January 2026 forecast origins only.",
+    "SCADA publication delay is unverified and assumed zero.",
+    "Nearest GFS grid point is about 12 km from the turbines."
+  ]
+}
