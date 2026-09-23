@@ -64,7 +64,7 @@ class ForecastService:
                 raise RegistryError("registered model bundle member escapes registry") from exc
         for name in ("data_manifest.json", "metrics_summary.json", "checksums.sha256"):
             member = resolved / name
-            if member.exists():
+            if member.exists() or member.is_symlink():
                 try: member.resolve(strict=True).relative_to(resolved)
                 except (OSError, ValueError) as exc: raise RegistryError("registered model bundle member escapes registry") from exc
         return resolved
