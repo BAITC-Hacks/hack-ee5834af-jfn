@@ -29,12 +29,12 @@ class ApiTests(unittest.TestCase):
         }))
         self.app = create_app(database=root / "api.sqlite3",snapshot_dir=snapshots,model_dir=models,background=False)
         class Recorded:
-            def __init__(self): self.calls=iter([("get_weather_forecast",{"snapshot_id":"gfs-feb6"}),("validate_inputs",{}),("run_forecast",{"model_id":"linear-v1"}),("validate_forecast",{}),("publish_forecast",{})])
+            def __init__(self, context): self.calls=iter([("get_weather_forecast",{"snapshot_id":context.candidates[0]}),("validate_inputs",{}),("run_forecast",{"model_id":context.model_id}),("validate_forecast",{}),("publish_forecast",{})])
             def respond(self,*_):
                 try: name,args=next(self.calls)
                 except StopIteration: return {"output":[]}
                 return {"id":"test","output":[{"type":"function_call","name":name,"arguments":json.dumps(args),"call_id":name}]}
-        self.app.state.service.operator_factory=lambda service,context,run_id,attempt: ForecastOperator(service,context,Recorded(),run_id=run_id,worker_attempt=attempt)
+        self.app.state.service.operator_factory=lambda service,context,run_id,attempt: ForecastOperator(service,context,Recorded(context),run_id=run_id,worker_attempt=attempt)
         self.client = TestClient(self.app)
 
     def tearDown(self): self.temp.cleanup()

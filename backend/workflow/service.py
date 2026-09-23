@@ -62,7 +62,21 @@ class ForecastService:
                 (resolved / name).resolve(strict=True).relative_to(resolved)
             except (OSError, ValueError) as exc:
                 raise RegistryError("registered model bundle member escapes registry") from exc
+        for name in ("data_manifest.json", "metrics_summary.json", "checksums.sha256"):
+            member = resolved / name
+            if member.exists():
+                try: member.resolve(strict=True).relative_to(resolved)
+                except (OSError, ValueError) as exc: raise RegistryError("registered model bundle member escapes registry") from exc
         return resolved
+
+    @staticmethod
+    def model_fingerprint(path: Path) -> str:
+        if path.is_file(): return hashlib.sha256(path.read_bytes()).hexdigest()
+        digest = hashlib.sha256()
+        for name in ("model.txt", "metadata.json", "feature_schema.json", "data_manifest.json", "metrics_summary.json", "checksums.sha256"):
+            member = path / name
+            if member.exists(): digest.update(name.encode()); digest.update(member.read_bytes())
+        return digest.hexdigest()
 
     def load_snapshot(self, snapshot_id: str, context: ReplayContext) -> tuple[dict[str, Any], str]:
         path = self._registered(self.snapshot_dir, snapshot_id, "weather_snapshot_id")
@@ -158,13 +172,15 @@ class ForecastService:
             bundle = load_bundle(model_path,run["model_id"],context)
             metadata = bundle.get("metadata") or bundle.get("bundle", {})
             model_hash = bundle.get("model_sha256") or (hashlib.sha256(model_path.read_bytes()).hexdigest() if model_path.is_file() else None)
+            model_fingerprint = self.model_fingerprint(model_path)
             points = predict(bundle,snapshot["points"],snapshot.get("init_time"))
-            if model_path.is_file() and hashlib.sha256(model_path.read_bytes()).hexdigest() != model_hash:
+            if self.model_fingerprint(model_path) != model_fingerprint:
                 raise ModelBlocked("registered model changed during inference")
             expected = {(p["turbine_id"],parse_timestamp(p["target_start"]),parse_timestamp(p["target_end"])) for p in snapshot["points"]}; actual = {(p["turbine_id"],parse_timestamp(p["target_start"]),parse_timestamp(p["target_end"])) for p in points}
             if len(points) != 2 * run["horizon"] or actual != expected: raise ModelBlocked("model output has incomplete coverage")
             audit.update({"model_training_cutoff":metadata["training_cutoff"],
                           "model_sha256":model_hash,
+                          "model_bundle_sha256":model_fingerprint,
                           "model_kind":bundle["kind"],
                           "point_count":len(points)})
             self.store.compute(run_id,points,audit,bundle.get("warning"))
