@@ -61,7 +61,10 @@ def main() -> None:
         validate_weather_snapshot(snapshot, context)
         bundle = load_bundle(MODEL_DIR, MODEL_ID, context)
         points = predict(bundle, snapshot["points"], snapshot["init_time"])
-        if len(points) != 96 or any(not math.isfinite(p["normalized_power"]) or not 0 <= p["normalized_power"] <= 1 for p in points):
+        expected = {(p["turbine_id"], p["target_start"], p["target_end"]) for p in snapshot["points"]}
+        actual = {(p["turbine_id"], p["target_start"], p["target_end"]) for p in points}
+        if (len(points) != 96 or len(actual) != 96 or actual != expected
+                or any(not math.isfinite(p["normalized_power"]) or not 0 <= p["normalized_power"] <= 1 for p in points)):
             raise RuntimeError(f"invalid numerical replay output for {stamp}")
         artifact = POINTS_DIR / f"{stamp}-h48.json"
         payload = {"run_id": str(uuid.uuid5(uuid.NAMESPACE_URL, f"mangust:{MODEL_ID}:{origin.isoformat()}:48")),
@@ -70,6 +73,8 @@ def main() -> None:
         artifact.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         entries.append({**base, "status": "REAL", "run_status": "COMPUTED",
                         "numerical_validation": "SUCCEEDED",
+                        "warning": bundle.get("warning"),
+                        "model_limitations": bundle.get("manifest", {}).get("limitations", []),
                         "run_id": payload["run_id"], "point_count": len(points),
                         "snapshot_path": str(snapshot_path.relative_to(ROOT)),
                         "snapshot_sha256": payload["weather_snapshot_sha256"],
