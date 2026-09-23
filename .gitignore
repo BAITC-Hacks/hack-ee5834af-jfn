@@ -3,3 +3,6 @@ __pycache__/
 .pytest_cache/
 data/cache/
 data/runtime/
+.cache/
+data/gfs-training/**/progress.json
+data/gfs-training/weekly-2025-08-to-2026-01/

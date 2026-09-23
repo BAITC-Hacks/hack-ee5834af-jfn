@@ -1,0 +1,32 @@
+{
+  "kind": "gfs_lightgbm_v1",
+  "feature_order": [
+    "gfs_wind_u_100m",
+    "gfs_wind_v_100m",
+    "gfs_wind_speed_100m",
+    "gfs_wind_u_10m",
+    "gfs_wind_v_10m",
+    "gfs_wind_speed_10m",
+    "gfs_temperature_2m",
+    "gfs_wind_speed_100m_sq",
+    "gfs_wind_speed_100m_cu",
+    "origin_lead_hours",
+    "gfs_lead_hours",
+    "gfs_init_hour",
+    "target_local_hour",
+    "target_local_month",
+    "target_local_day_of_year",
+    "turbine_id"
+  ],
+  "forecast_hour_definition": "origin_lead_hours is 0 for first target; score bucket is origin_lead_hours + 1",
+  "gfs_lead_definition": "gfs_lead_hours is target_start minus GFS init_time in hours",
+  "weather_fields": [
+    "gfs_wind_u_100m",
+    "gfs_wind_v_100m",
+    "gfs_wind_speed_100m",
+    "gfs_wind_u_10m",
+    "gfs_wind_v_10m",
+    "gfs_wind_speed_10m",
+    "gfs_temperature_2m"
+  ]
+}

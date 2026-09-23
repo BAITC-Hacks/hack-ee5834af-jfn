@@ -1,4 +1,5 @@
 import json
+import os
 import shutil
 import sqlite3
 import tempfile
@@ -102,7 +103,12 @@ class WorkflowTests(unittest.TestCase):
         bundle_dir = self.models / "brev-scada-pooled-lgbm-20260201"
         shutil.copytree(SCADA, bundle_dir)
         (bundle_dir / "model.txt").unlink()
-        (bundle_dir / "model.txt").symlink_to(Path("/etc/hosts"))
+        try:
+            (bundle_dir / "model.txt").symlink_to(Path("/etc/hosts"))
+        except OSError as exc:
+            if os.name == "nt" and getattr(exc, "winerror", None) == 1314:
+                self.skipTest("Windows symlink privilege is unavailable")
+            raise
         run, _ = self.create(model="brev-scada-pooled-lgbm-20260201")
         self.service.process_one()
         self.assertEqual(self.service.get_forecast(run["id"])["status"], "BLOCKED")

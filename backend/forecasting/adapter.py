@@ -10,6 +10,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from backend.replay import ReplayContext, parse_timestamp, validate_artifact_cutoffs
+from backend.forecasting.gfs_features import FEATURE_ORDER as GFS_FEATURES, make_gfs_features
 
 FEATURES = ("wind_u_100m", "wind_v_100m", "wind_speed_100m", "wind_u_10m", "wind_v_10m", "wind_speed_10m", "temperature_2m")
 SCADA_FEATURES = ("wind_speed", "temperature", "wind_sq", "wind_cu", "hour", "month", "day_of_year", "turbine_id")
@@ -95,10 +96,114 @@ def _scada(path: Path, model_id: str, context: ReplayContext) -> dict[str, Any]:
     return {"kind": "scada_lightgbm_v1", "booster": booster, "metadata": metadata, "manifest": manifest, "model_sha256": actual_sha, "warning": SCADA_WARNING}
 
 
+def _gfs(path: Path, model_id: str, context: ReplayContext) -> dict[str, Any]:
+    metadata = _json(path / "metadata.json", "GFS model metadata")
+    schema = _json(path / "feature_schema.json", "GFS feature schema")
+    manifest = _json(path / "data_manifest.json", "GFS data manifest")
+    if metadata.get("kind") != "gfs_lightgbm_v1" or metadata.get("model_id") != model_id:
+        raise ModelBlocked("GFS bundle metadata is incompatible")
+    try:
+        validate_artifact_cutoffs(metadata, context)
+        validate_artifact_cutoffs(manifest, context)
+    except (TypeError, ValueError) as exc:
+        raise ModelBlocked(str(exc)) from exc
+    if tuple(metadata.get("feature_order", ())) != GFS_FEATURES or tuple(schema.get("feature_order", ())) != GFS_FEATURES:
+        raise ModelBlocked("GFS feature schema is incompatible")
+    if metadata.get("source_weather_provider") != "noaa_gfs" or metadata.get("supported_forecast_horizon_hours") != 48:
+        raise ModelBlocked("GFS source or horizon is incompatible")
+    if metadata.get("origin_schedule", {}).get("hour_utc") != context.as_of.hour or context.horizon_hours != 48:
+        raise ModelBlocked("forecast origin is outside the validated GFS schedule or horizon")
+    if metadata.get("source_timezone") != "Asia/Almaty":
+        raise ModelBlocked("GFS timezone is incompatible")
+    expected_files = ("model.txt", "metadata.json", "feature_schema.json", "data_manifest.json", "metrics_summary.json")
+    try:
+        checksum_lines = (path / "checksums.sha256").read_text(encoding="ascii").splitlines()
+        checksums = dict(line.split("  ", 1)[::-1] for line in checksum_lines)
+        if set(checksums) != set(expected_files):
+            raise ValueError("checksum member list differs")
+        for name in expected_files:
+            if hashlib.sha256((path / name).read_bytes()).hexdigest() != checksums[name]:
+                raise ValueError(f"{name} SHA-256 differs from checksum manifest")
+        model_bytes = (path / "model.txt").read_bytes()
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise ModelBlocked(f"GFS bundle checksum mismatch: {exc}") from exc
+    model_sha = hashlib.sha256(model_bytes).hexdigest()
+    if metadata.get("model_sha256") != model_sha or manifest.get("model_sha256") != model_sha:
+        raise ModelBlocked("GFS model SHA-256 differs from metadata")
+    try:
+        import lightgbm as lgb
+        booster = lgb.Booster(model_str=model_bytes.decode("utf-8"))
+    except (ImportError, UnicodeError, ValueError) as exc:
+        raise ModelBlocked("GFS LightGBM model cannot be loaded") from exc
+    if tuple(booster.feature_name()) != GFS_FEATURES:
+        raise ModelBlocked("GFS LightGBM feature order is incompatible")
+    if not isinstance(manifest.get("limitations"), list):
+        raise ModelBlocked("GFS model limitations are missing")
+    summary = _json(path / "metrics_summary.json", "GFS metrics summary")
+    warning = None if summary.get("validation_winner") == "pooled_gfs_lightgbm" else "GFS LightGBM did not beat its power-curve baseline on retrospective validation."
+    return {"kind": "gfs_lightgbm_v1", "booster": booster, "metadata": metadata,
+            "manifest": manifest, "model_sha256": model_sha, "warning": warning,
+            "origin_time": context.as_of}
+
+
+def _gfs_curve(path: Path, model_id: str, context: ReplayContext) -> dict[str, Any]:
+    metadata = _json(path / "metadata.json", "GFS power curve metadata")
+    schema = _json(path / "feature_schema.json", "GFS power curve schema")
+    manifest = _json(path / "data_manifest.json", "GFS power curve manifest")
+    if metadata.get("kind") != "gfs_power_curve_v1" or metadata.get("model_id") != model_id:
+        raise ModelBlocked("GFS power curve metadata is incompatible")
+    try:
+        validate_artifact_cutoffs(metadata, context)
+        validate_artifact_cutoffs(manifest, context)
+    except (TypeError, ValueError) as exc:
+        raise ModelBlocked(str(exc)) from exc
+    expected_features = ("gfs_wind_speed_100m", "turbine_id")
+    if tuple(metadata.get("feature_order", ())) != expected_features or tuple(schema.get("feature_order", ())) != expected_features:
+        raise ModelBlocked("GFS power curve feature schema is incompatible")
+    if metadata.get("source_weather_provider") != "noaa_gfs" or metadata.get("origin_schedule", {}).get("hour_utc") != context.as_of.hour or context.horizon_hours != 48:
+        raise ModelBlocked("forecast origin is outside the validated GFS schedule or horizon")
+    expected_files = ("model.txt", "metadata.json", "feature_schema.json", "data_manifest.json", "metrics_summary.json")
+    try:
+        checksums = dict(line.split("  ", 1)[::-1] for line in (path / "checksums.sha256").read_text(encoding="ascii").splitlines())
+        if set(checksums) != set(expected_files):
+            raise ValueError("checksum member list differs")
+        for name in expected_files:
+            if hashlib.sha256((path / name).read_bytes()).hexdigest() != checksums[name]:
+                raise ValueError(f"{name} SHA-256 differs")
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise ModelBlocked(f"GFS power curve checksum mismatch: {exc}") from exc
+    model_sha = checksums["model.txt"]
+    if metadata.get("model_sha256") != model_sha or manifest.get("model_sha256") != model_sha:
+        raise ModelBlocked("GFS power curve SHA-256 differs from metadata")
+    curve = _json(path / "model.txt", "GFS power curve model")
+    if set(curve) != {"1", "2"}:
+        raise ModelBlocked("GFS power curve requires both turbines")
+    for turbine in ("1", "2"):
+        spec = curve[turbine]
+        if not isinstance(spec, dict) or not isinstance(spec.get("bins"), dict):
+            raise ModelBlocked("GFS power curve bins are incompatible")
+        for value in [spec.get("fallback"), *spec["bins"].values()]:
+            if not 0 <= _finite(value, "GFS power curve value") <= 1:
+                raise ModelBlocked("GFS power curve values must be in [0,1]")
+        try:
+            if any(int(key) < 0 or str(int(key)) != key for key in spec["bins"]):
+                raise ValueError()
+        except (TypeError, ValueError) as exc:
+            raise ModelBlocked("GFS power curve wind bins are incompatible") from exc
+    return {"kind": "gfs_power_curve_v1", "curve": curve, "metadata": metadata,
+            "manifest": manifest, "model_sha256": model_sha, "warning": "Sparse archived-GFS validation; operational accuracy remains uncertain.",
+            "origin_time": context.as_of}
+
+
 def load_bundle(path: Path, model_id: str, context: ReplayContext) -> dict[str, Any]:
     if path.is_file():
         return _linear(path, model_id, context)
     if path.is_dir():
+        metadata = _json(path / "metadata.json", "model metadata")
+        if metadata.get("kind") == "gfs_lightgbm_v1":
+            return _gfs(path, model_id, context)
+        if metadata.get("kind") == "gfs_power_curve_v1":
+            return _gfs_curve(path, model_id, context)
         return _scada(path, model_id, context)
     raise ModelBlocked(f"registered model bundle is missing: {model_id}")
 
@@ -144,9 +249,54 @@ def _scada_predict(bundle: dict[str, Any], weather_points: list[dict[str, Any]])
     return output
 
 
-def predict(bundle: dict[str, Any], weather_points: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _gfs_predict(bundle: dict[str, Any], weather_points: list[dict[str, Any]],
+                 weather_init_time: str | None) -> list[dict[str, Any]]:
+    if weather_init_time is None:
+        raise ModelBlocked("GFS init_time is required for GFS model inference")
+    try:
+        import numpy as np
+        rows = [list(make_gfs_features(point, bundle["origin_time"], weather_init_time).values())
+                for point in weather_points]
+        values = bundle["booster"].predict(np.asarray(rows, dtype=np.float64))
+    except (ImportError, TypeError, ValueError) as exc:
+        raise ModelBlocked(f"GFS feature preparation or prediction failed: {exc}") from exc
+    if len(values) != len(weather_points):
+        raise ModelBlocked("GFS prediction coverage differs from weather points")
+    result = []
+    for point, value in zip(weather_points, values, strict=True):
+        value = _finite(value, "GFS LightGBM prediction")
+        result.append({"turbine_id": point["turbine_id"], "target_start": point["target_start"],
+                       "target_end": point["target_end"], "normalized_power": min(1.0, max(0.0, value))})
+    return result
+
+
+def _gfs_curve_predict(bundle: dict[str, Any], weather_points: list[dict[str, Any]],
+                       weather_init_time: str | None) -> list[dict[str, Any]]:
+    if weather_init_time is None:
+        raise ModelBlocked("GFS init_time is required for power curve inference")
+    result = []
+    for point in weather_points:
+        try:
+            features = make_gfs_features(point, bundle["origin_time"], weather_init_time)
+            turbine = str(int(features["turbine_id"]))
+            spec = bundle["curve"][turbine]
+            wind_bin = str(math.floor(features["gfs_wind_speed_100m"]))
+            value = _finite(spec["bins"].get(wind_bin, spec["fallback"]), "GFS power curve prediction")
+        except (TypeError, ValueError, KeyError) as exc:
+            raise ModelBlocked(f"GFS power curve prediction failed: {exc}") from exc
+        result.append({"turbine_id": point["turbine_id"], "target_start": point["target_start"],
+                       "target_end": point["target_end"], "normalized_power": min(1.0, max(0.0, value))})
+    return result
+
+
+def predict(bundle: dict[str, Any], weather_points: list[dict[str, Any]],
+            weather_init_time: str | None = None) -> list[dict[str, Any]]:
     if bundle.get("kind") == "linear_json_v1":
         return _linear_predict(bundle, weather_points)
     if bundle.get("kind") == "scada_lightgbm_v1":
         return _scada_predict(bundle, weather_points)
+    if bundle.get("kind") == "gfs_lightgbm_v1":
+        return _gfs_predict(bundle, weather_points, weather_init_time)
+    if bundle.get("kind") == "gfs_power_curve_v1":
+        return _gfs_curve_predict(bundle, weather_points, weather_init_time)
     raise ModelBlocked("model kind is incompatible")

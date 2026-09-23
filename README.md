@@ -4,12 +4,13 @@
 
 ## Текущий статус
 
-Реализован вертикальный сценарий: точечная загрузка архивного NOAA GFS, строгие временные проверки, воспроизводимый audit и CPU inference сохранённого LightGBM bundle через FastAPI worker. Прогнозы с GFS помечены экспериментальными: модель обучалась на наблюдаемых почасовых SCADA wind/temperature, а точность на архивной прогнозной погоде ещё не измерена.
+Реализован вертикальный сценарий: загрузка архивного NOAA GFS, строгие временные проверки, воспроизводимый audit и CPU inference через FastAPI worker. Добавлен pipeline обучения на GFS, доступном к историческому forecast origin. На разреженной выборке из 11 origins (август 2025 — январь 2026) GFS power-curve baseline выиграл у GFS LightGBM: январская MAE **0,2044 против 0,2472** на одинаковых 384 строках. Для проверенных origins `06:00 UTC` рекомендуемый bundle — `gfs-power-curve-mvp-20260131`; GFS LightGBM сохранён как экспериментальный. Это ограниченная ретроспективная оценка, не доказанная точность всех будущих запусков.
 
 - [Архитектура и полный анализ данных](docs/architecture.md)
 - [План реализации и критерии готовности](docs/implementation-plan.md)
 - [План обучения в NVIDIA Brev](docs/brev-training.md)
 - [Запуск исторического replay погоды](docs/weather-replay.md)
+- [Архивный GFS dataset, обучение и validation](docs/gfs-training.md)
 - [Forecast API, worker и SQLite](docs/backend-api.md)
 - [Исходное обсуждение архитектуры — issue #1](https://github.com/BAITC-Hacks/hack-ee5834af-jfn/issues/1)
 

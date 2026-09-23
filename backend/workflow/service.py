@@ -155,7 +155,7 @@ class ForecastService:
             if actual_hash != run["snapshot_hash"]:
                 raise ModelBlocked("registered snapshot changed after run creation")
             bundle = load_bundle(self._registered_model(run["model_id"]),run["model_id"],context)
-            points = predict(bundle,snapshot["points"])
+            points = predict(bundle,snapshot["points"],snapshot["init_time"])
             expected = {(p["turbine_id"],parse_timestamp(p["target_start"]),parse_timestamp(p["target_end"])) for p in snapshot["points"]}
             actual = {(p["turbine_id"],parse_timestamp(p["target_start"]),parse_timestamp(p["target_end"])) for p in points}
             if len(points) != 2 * run["horizon"] or actual != expected:
@@ -164,6 +164,11 @@ class ForecastService:
             audit.update({"model_training_cutoff":metadata["training_cutoff"], "point_count":len(points), "model_kind":bundle["kind"]})
             if bundle["kind"] == "scada_lightgbm_v1":
                 audit.update({"model_sha256":bundle["model_sha256"], "model_feature_schema":metadata["feature_order"], "model_weather_mapping":metadata["weather_mapping"], "model_source_timezone":metadata["source_timezone"], "model_limitations":bundle["manifest"]["limitations"]})
+            if bundle["kind"] in ("gfs_lightgbm_v1", "gfs_power_curve_v1"):
+                audit.update({"model_sha256":bundle["model_sha256"],
+                              "model_feature_schema":metadata["feature_order"],
+                              "model_source_weather_provider":metadata["source_weather_provider"],
+                              "model_limitations":bundle["manifest"]["limitations"]})
             self.store.finish(run["id"],points,audit,bundle.get("warning"))
         except Exception as exc:
             self.store.block(run["id"],str(exc),audit)
