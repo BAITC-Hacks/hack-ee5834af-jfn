@@ -42,6 +42,28 @@ class ForecastService:
             raise RegistryError(f"invalid {label}")
         return path
 
+    def _registered_model(self, model_id: str) -> Path:
+        """Resolve a registered legacy file or a future directory bundle safely."""
+        model_id = self._id(model_id, "model_id")
+        directory, legacy = self.model_dir / model_id, self.model_dir / f"{model_id}.json"
+        candidate = directory if directory.exists() else legacy
+        try:
+            resolved = candidate.resolve(strict=True)
+        except OSError as exc:
+            raise RegistryError(f"registered model bundle is missing: {model_id}") from exc
+        if resolved.parent != self.model_dir:
+            raise RegistryError("invalid model_id")
+        if resolved.is_file():
+            return resolved
+        if not resolved.is_dir():
+            raise RegistryError(f"registered model bundle is missing: {model_id}")
+        for name in ("metadata.json", "feature_schema.json", "model.txt"):
+            try:
+                (resolved / name).resolve(strict=True).relative_to(resolved)
+            except (OSError, ValueError) as exc:
+                raise RegistryError("registered model bundle member escapes registry") from exc
+        return resolved
+
     def load_snapshot(self, snapshot_id: str, context: ReplayContext) -> tuple[dict[str, Any], str]:
         path = self._registered(self.snapshot_dir, snapshot_id, "weather_snapshot_id")
         if not path.is_file():
@@ -132,7 +154,7 @@ class ForecastService:
         try:
             snapshot, actual_hash = self.load_snapshot(run["weather_snapshot_id"],context)
             if actual_hash != run["snapshot_hash"]: raise ModelBlocked("registered snapshot changed after run creation")
-            model_path = self._registered(self.model_dir,run["model_id"],"model_id")
+            model_path = self._registered_model(run["model_id"])
             model_hash = hashlib.sha256(model_path.read_bytes()).hexdigest()
             bundle = load_bundle(model_path,run["model_id"],context)
             points = predict(bundle,snapshot["points"])

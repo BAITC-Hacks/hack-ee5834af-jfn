@@ -1,3 +1,4 @@
+import hashlib
 import json
 import shutil
 import sqlite3
@@ -7,8 +8,8 @@ from contextlib import closing
 from datetime import timedelta
 from pathlib import Path
 
-from backend.forecasting.adapter import FEATURES
-from backend.replay import parse_timestamp
+from backend.forecasting.adapter import FEATURES, ModelBlocked, load_native_bundle, predict
+from backend.replay import ReplayContext, parse_timestamp
 from backend.storage import Store
 from backend.workflow import ForecastService, RegistryError
 from backend.agent.operator import ForecastOperator
@@ -16,8 +17,6 @@ from backend.agent.tools import RunContext
 
 
 FIXTURE = Path(__file__).parents[1] / "data/fixtures/noaa-gfs-20260206T000000Z-h48.json"
-
-
 class WorkflowTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -40,6 +39,28 @@ class WorkflowTests(unittest.TestCase):
                 except StopIteration: return {"output":[]}
                 return {"id":"test","output":[{"type":"function_call","name":name,"arguments":json.dumps(args),"call_id":name}]}
         self.service.operator_factory = lambda service, context, run_id, attempt: ForecastOperator(service, context, Recorded(), run_id=run_id, worker_attempt=attempt)
+
+    def native_fixture(self, model_id="synthetic-loader-fixture", cutoff="2026-01-31T00:00:00Z"):
+        import lightgbm as lgb
+        import numpy as np
+        bundle_dir = self.models / model_id
+        bundle_dir.mkdir()
+        feature_order = ["synthetic_wind", "synthetic_temperature"]
+        dataset = lgb.Dataset(
+            np.asarray([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]),
+            label=np.asarray([0.0, 0.4, 0.6, 1.0]), feature_name=feature_order,
+        )
+        booster = lgb.train({"objective":"regression", "verbosity":-1, "seed":7,
+                             "num_threads":1, "min_data_in_leaf":1}, dataset, num_boost_round=2)
+        booster.save_model(str(bundle_dir / "model.txt"))
+        model_hash = hashlib.sha256((bundle_dir / "model.txt").read_bytes()).hexdigest()
+        (bundle_dir / "metadata.json").write_text(json.dumps({
+            "kind":"lightgbm_native_v1", "model_id":model_id,
+            "training_cutoff":cutoff, "feature_order":feature_order,
+            "model_sha256":model_hash,
+        }))
+        (bundle_dir / "feature_schema.json").write_text(json.dumps({"feature_order":feature_order}))
+        return bundle_dir
 
     def tearDown(self):
         self.temp.cleanup()
@@ -64,6 +85,56 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(result["status"],"BLOCKED")
         self.assertEqual(result["points"],[])
         self.assertEqual(result["points"],[])
+
+    def test_synthetic_native_bundle_loads_on_cpu_and_enforces_cutoff(self):
+        path = self.native_fixture()
+        context = ReplayContext(parse_timestamp("2026-02-06T00:00:00Z"), 48)
+        bundle = load_native_bundle(path, "synthetic-loader-fixture", context)
+        self.assertEqual(bundle["booster"].feature_name(), ["synthetic_wind", "synthetic_temperature"])
+        self.assertEqual(bundle["booster"].params.get("device_type", "cpu"), "cpu")
+        with self.assertRaisesRegex(ModelBlocked, "future training_cutoff"):
+            load_native_bundle(path, "synthetic-loader-fixture", ReplayContext(parse_timestamp("2026-01-30T00:00:00Z"), 24))
+
+    def test_native_bundle_blocks_until_feature_adapter_is_registered(self):
+        self.native_fixture()
+        run, _ = self.create(model="synthetic-loader-fixture")
+        self.service.process_one()
+        result = self.service.get_forecast(run["id"])
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertEqual(result["points"], [])
+        self.assertIn("model-specific feature adapter", result["error"])
+
+    def test_tampered_native_model_blocks(self):
+        bundle_dir = self.native_fixture()
+        (bundle_dir / "model.txt").write_text("tampered")
+        run, _ = self.create(model="synthetic-loader-fixture")
+        self.service.process_one()
+        self.assertIn("SHA-256", self.service.get_forecast(run["id"])["error"])
+
+    def test_tampered_native_schema_blocks(self):
+        bundle_dir = self.native_fixture()
+        metadata = json.loads((bundle_dir / "feature_schema.json").read_text())
+        metadata["feature_order"] = list(reversed(metadata["feature_order"]))
+        (bundle_dir / "feature_schema.json").write_text(json.dumps(metadata))
+        run, _ = self.create(model="synthetic-loader-fixture")
+        self.service.process_one()
+        self.assertIn("feature schema", self.service.get_forecast(run["id"])["error"])
+
+    def test_missing_native_member_blocks(self):
+        bundle_dir = self.native_fixture()
+        (bundle_dir / "feature_schema.json").unlink()
+        run, _ = self.create(model="synthetic-loader-fixture")
+        self.service.process_one()
+        self.assertEqual(self.service.get_forecast(run["id"])["status"], "BLOCKED")
+
+    def test_symlinked_native_model_blocks(self):
+        bundle_dir = self.native_fixture()
+        (bundle_dir / "model.txt").unlink()
+        (bundle_dir / "model.txt").symlink_to(Path("/etc/hosts"))
+        run, _ = self.create(model="synthetic-loader-fixture")
+        self.service.process_one()
+        self.assertEqual(self.service.get_forecast(run["id"])["status"], "BLOCKED")
+        self.assertIn("escapes registry", self.service.get_forecast(run["id"])["error"])
 
     def test_root_and_revision_requests_are_idempotent(self):
         first, created = self.create()
