@@ -44,7 +44,7 @@
     ]
   },
   "target_aggregation": "mean of six valid 10-minute power readings",
-  "model_sha256": "1614e25e62aedb24ae1ff3faaa2ede2c8566ad29ccda7398d38c812bee792853",
+  "model_sha256": "9f43760764cb1954d678411a41ca9a11b3462574304e1b9c580d3c2cd2ada523",
   "limitations": [
     "Retrospective archived GFS evaluation; artifact was trained later.",
     "SCADA publication latency is unknown; primary assumption is zero hours.",

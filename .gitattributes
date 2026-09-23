@@ -5,6 +5,7 @@ artifacts/models/**/*.sha256 text eol=lf
 ml/*.py text eol=lf
 ml/*.json text eol=lf
 ml/gfs-origins-mvp.txt text eol=lf
+ml/gfs-origins-extended.txt text eol=lf
 data/gfs-training/**/*.json text eol=lf
 data/gfs-training/**/*.csv text eol=lf
 data/gfs-training/**/*.sha256 text eol=lf

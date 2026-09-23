@@ -68,6 +68,36 @@ def score_candidates(train: pd.DataFrame, target: pd.DataFrame):
             for name in ("power_curve_gfs", *PARAMS)}
 
 
+def previous_curve_comparison(previous: pd.DataFrame, expanded_train: pd.DataFrame,
+                              holdout: pd.DataFrame):
+    origin = pd.to_datetime(previous.origin_time, utc=True)
+    available = pd.to_datetime(previous.label_available_at, utc=True)
+    previous_train = previous.loc[(origin < HOLDOUT_START) & (available <= HOLDOUT_START)].copy()
+    previous_january = previous.loc[(origin >= HOLDOUT_START) & (origin < FINAL_CUTOFF) &
+                                    (available <= FINAL_CUTOFF)].copy()
+    common = holdout.loc[holdout.origin_time.isin(previous_january.origin_time.unique())].copy()
+    keys = ["origin_time", "target_time", "turbine_id"]
+    if set(map(tuple, common[keys].to_numpy())) != set(map(tuple, previous_january[keys].to_numpy())):
+        raise ValueError("previous and expanded January key sets differ")
+    old_labels = previous_january.set_index(keys).target_power.sort_index()
+    new_labels = common.set_index(keys).target_power.sort_index()
+    if not old_labels.equals(new_labels):
+        raise ValueError("previous and expanded January labels differ")
+    return {
+        "comparison_rule": "Both power curves fit before January; no January rows in either fit.",
+        "previous_train_origins": previous_train.origin_time.nunique(),
+        "expanded_train_origins": expanded_train.origin_time.nunique(),
+        "common_4_origins": {
+            "previous_curve": metrics(common, predict_curve(fit_curve(previous_train), common)),
+            "expanded_curve": metrics(common, predict_curve(fit_curve(expanded_train), common)),
+        },
+        "all_9_origins": {
+            "previous_curve": metrics(holdout, predict_curve(fit_curve(previous_train), holdout)),
+            "expanded_curve": metrics(holdout, predict_curve(fit_curve(expanded_train), holdout)),
+        },
+    }
+
+
 def audit_dataset(dataset: Path, manifest: dict, frame: pd.DataFrame):
     if sha256(dataset / "training_rows.csv") != manifest["dataset_sha256"]:
         raise ValueError("dataset SHA-256 mismatch")
@@ -99,7 +129,7 @@ def write_bundle(out: Path, winner: str, refit: pd.DataFrame, source: Path,
         curve = fit_curve(refit)
         payload = {str(tid): {"bins": {str(k): v for k, v in spec["bins"].items()},
                               "fallback": spec["fallback"]} for tid, spec in curve.items()}
-        (out / "model.txt").write_text(strict_json(payload) + "\n", encoding="utf-8")
+        (out / "model.txt").write_bytes((strict_json(payload) + "\n").encode("utf-8"))
         kind, order = "gfs_power_curve_v1", ["gfs_wind_speed_100m", "turbine_id"]
     else:
         model = model_for(winner)
@@ -133,9 +163,9 @@ def write_bundle(out: Path, winner: str, refit: pd.DataFrame, source: Path,
                "exported_model_refit": True, "exported_model_has_independent_holdout_score": False}
     for name, obj in (("metadata.json", metadata), ("feature_schema.json", schema),
                       ("data_manifest.json", data_manifest), ("metrics_summary.json", summary)):
-        (out / name).write_text(strict_json(obj) + "\n", encoding="utf-8")
+        (out / name).write_bytes((strict_json(obj) + "\n").encode("utf-8"))
     names = ("model.txt", "metadata.json", "feature_schema.json", "data_manifest.json", "metrics_summary.json")
-    (out / "checksums.sha256").write_text("".join(f"{sha256(out / name)}  {name}\n" for name in names), encoding="ascii")
+    (out / "checksums.sha256").write_bytes("".join(f"{sha256(out / name)}  {name}\n" for name in names).encode("ascii"))
     bundle = load_bundle(out, out.name, ReplayContext(FIRST_ORIGIN, 48))
     snapshot = json.loads((ROOT / "data/fixtures/noaa-gfs-20260206T060000Z-h48.json").read_text(encoding="utf-8"))
     check_context = ReplayContext(parse_timestamp("2026-02-06T06:00:00Z"), 48)
@@ -162,6 +192,8 @@ def main():
     # Frozen selection: January is evaluated exactly once after the December decision.
     before_january = pd.concat([train, tune], ignore_index=True)
     holdout_scores = score_candidates(before_january, holdout)
+    previous = pd.read_csv(ROOT / "data/gfs-training/mvp-2025-08-to-2026-01/training_rows.csv")
+    direct_comparison = previous_curve_comparison(previous, before_january, holdout)
     delay = {}
     for hours in (0, 6, 24, 48, 72):
         a, b, c, d = subsets(frame, hours)
@@ -180,6 +212,7 @@ def main():
                         "train_max_label_available_at": str(pd.to_datetime(train.label_available_at, utc=True).max()),
                         "tune_max_label_available_at": str(pd.to_datetime(tune.label_available_at, utc=True).max())},
               "december_tune": tune_scores, "january_holdout": holdout_scores,
+              "previous_curve_same_rows": direct_comparison,
               "scada_delay_sensitivity_hours": delay,
               "source_origins_requested": source["origins_requested"],
               "source_origins_complete": source["origins_complete"],
