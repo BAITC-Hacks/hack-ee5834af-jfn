@@ -1,4 +1,4 @@
-import type { AgentEvent, AuditItem, DashboardAdapter, DashboardData, ForecastPoint, ReplayRequest, RunSummary } from './types';
+import type { AgentEvent, AuditItem, DashboardAdapter, DashboardData, ForecastPoint, RunSummary } from './types';
 
 const modelId = import.meta.env.VITE_MODEL_ID ?? 'brev-scada-pooled-lgbm-20260201';
 const snapshotId = import.meta.env.VITE_WEATHER_SNAPSHOT_ID ?? 'gfs-feb6';
