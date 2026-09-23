@@ -55,7 +55,10 @@ class ForecastService:
             return resolved
         if not resolved.is_dir():
             raise RegistryError(f"registered model bundle is missing: {model_id}")
-        for name in ("metadata.json", "feature_schema.json", "data_manifest.json", "model.txt"):
+        required = ("metadata.json", "feature_schema.json", "model.txt")
+        optional = ("data_manifest.json", "metrics_summary.json", "checksums.sha256")
+        members = required + tuple(name for name in optional if (resolved / name).exists() or (resolved / name).is_symlink())
+        for name in members:
             try:
                 (resolved / name).resolve(strict=True).relative_to(resolved)
             except (OSError, ValueError) as exc:

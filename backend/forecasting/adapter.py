@@ -58,6 +58,43 @@ def _linear(path: Path, model_id: str, context: ReplayContext) -> dict[str, Any]
     return {"kind": "linear_json_v1", "bundle": model, "warning": None}
 
 
+def load_native_bundle(path: Path, model_id: str, context: ReplayContext) -> dict[str, Any]:
+    """Validate and load a code-free native LightGBM directory on CPU."""
+    metadata = _json(path / "metadata.json", "model metadata")
+    schema = _json(path / "feature_schema.json", "model feature schema")
+    if metadata.get("kind") != "lightgbm_native_v1" or metadata.get("model_id") != model_id:
+        raise ModelBlocked("model bundle metadata is incompatible")
+    try:
+        validate_artifact_cutoffs(metadata, context)
+    except (TypeError, ValueError) as exc:
+        raise ModelBlocked(str(exc)) from exc
+    feature_order = metadata.get("feature_order")
+    if (not isinstance(feature_order, list) or not feature_order
+            or not all(isinstance(name, str) and name for name in feature_order)
+            or len(set(feature_order)) != len(feature_order)
+            or schema.get("feature_order") != feature_order):
+        raise ModelBlocked("model feature schema is incompatible")
+    expected_sha = metadata.get("model_sha256")
+    if not isinstance(expected_sha, str) or len(expected_sha) != 64:
+        raise ModelBlocked("model SHA-256 metadata is incompatible")
+    try:
+        model_bytes = (path / "model.txt").read_bytes()
+    except OSError as exc:
+        raise ModelBlocked("model file cannot be loaded") from exc
+    actual_sha = hashlib.sha256(model_bytes).hexdigest()
+    if actual_sha != expected_sha:
+        raise ModelBlocked("model.txt SHA-256 differs from metadata")
+    try:
+        import lightgbm as lgb
+        booster = lgb.Booster(model_str=model_bytes.decode("utf-8"))
+    except (ImportError, UnicodeDecodeError, ValueError) as exc:
+        raise ModelBlocked("LightGBM model cannot be loaded") from exc
+    if booster.feature_name() != feature_order:
+        raise ModelBlocked("LightGBM feature order is incompatible")
+    return {"kind": "lightgbm_native_v1", "booster": booster,
+            "metadata": metadata, "model_sha256": actual_sha}
+
+
 def _scada(path: Path, model_id: str, context: ReplayContext) -> dict[str, Any]:
     metadata, schema, manifest = (_json(path / name, label) for name, label in (("metadata.json", "model metadata"), ("feature_schema.json", "model feature schema"), ("data_manifest.json", "model manifest")))
     if metadata.get("kind") != "scada_lightgbm_v1" or metadata.get("model_id") != model_id:
@@ -200,6 +237,8 @@ def load_bundle(path: Path, model_id: str, context: ReplayContext) -> dict[str, 
         return _linear(path, model_id, context)
     if path.is_dir():
         metadata = _json(path / "metadata.json", "model metadata")
+        if metadata.get("kind") == "lightgbm_native_v1":
+            return load_native_bundle(path, model_id, context)
         if metadata.get("kind") == "gfs_lightgbm_v1":
             return _gfs(path, model_id, context)
         if metadata.get("kind") == "gfs_power_curve_v1":
@@ -291,6 +330,8 @@ def _gfs_curve_predict(bundle: dict[str, Any], weather_points: list[dict[str, An
 
 def predict(bundle: dict[str, Any], weather_points: list[dict[str, Any]],
             weather_init_time: str | None = None) -> list[dict[str, Any]]:
+    if bundle.get("kind") == "lightgbm_native_v1":
+        raise ModelBlocked("native LightGBM bundle requires a model-specific feature adapter")
     if bundle.get("kind") == "linear_json_v1":
         return _linear_predict(bundle, weather_points)
     if bundle.get("kind") == "scada_lightgbm_v1":
