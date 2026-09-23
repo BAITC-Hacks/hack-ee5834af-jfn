@@ -9,6 +9,7 @@ it('shows backend-started tools as running and uses the latest retry outcome', (
   expect(screen.getByText('OpenAI Agent')).toBeInTheDocument();
   expect(screen.getByText('Live OpenAI · Running')).toBeInTheDocument();
   expect(screen.getAllByText('Inputs validated')).toHaveLength(3);
+  expect(screen.getAllByText('Started')).toHaveLength(2);
 });
 it('marks completion only after the recorded live OpenAI decision', () => {
   render(<AgentTimeline copy={copy.en} events={[event('AI · live_openai', '2026-02-06T06:00:05Z')]} />);
