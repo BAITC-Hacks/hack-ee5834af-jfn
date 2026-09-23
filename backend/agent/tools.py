@@ -163,9 +163,11 @@ class AgentTools:
         _, digest = self.service.load_snapshot(self.selected, self.context.replay)
         if digest != self.snapshot_hash:
             raise PublishRejected("registered snapshot changed")
-        model_path = self.service._registered(self.service.model_dir, self.context.model_id, "model_id")
-        load_bundle(model_path, self.context.model_id, self.context.replay)
-        self.model_hash = hashlib.sha256(model_path.read_bytes()).hexdigest()
+        model_path = self.service._registered_model(self.context.model_id)
+        bundle = load_bundle(model_path, self.context.model_id, self.context.replay)
+        self.model_hash = bundle.get("model_sha256") or (hashlib.sha256(model_path.read_bytes()).hexdigest() if model_path.is_file() else None)
+        if self.model_hash is None:
+            raise PublishRejected("model fingerprint is unavailable")
         self.input_passed = True
         return {"ok": True, "temporal": "PASS", "data": "PASS",
                 "snapshot_id": self.selected, "model_id": self.context.model_id}
@@ -233,9 +235,10 @@ class AgentTools:
         snapshot, digest = self.service.load_snapshot(self.selected, self.context.replay)
         if digest != run["snapshot_hash"]:
             raise PublishRejected("registered snapshot changed after inference")
-        model_path = self.service._registered(self.service.model_dir, self.context.model_id, "model_id")
-        load_bundle(model_path, self.context.model_id, self.context.replay)
-        if self.model_hash is None or hashlib.sha256(model_path.read_bytes()).hexdigest() != self.model_hash:
+        model_path = self.service._registered_model(self.context.model_id)
+        bundle = load_bundle(model_path, self.context.model_id, self.context.replay)
+        current_hash = bundle.get("model_sha256") or (hashlib.sha256(model_path.read_bytes()).hexdigest() if model_path.is_file() else None)
+        if self.model_hash is None or current_hash != self.model_hash:
             raise PublishRejected("registered model changed after input validation")
         audit = self.service.get_audit(self.run_id)
         if audit is None or audit["status"] not in ("COMPUTED", "SUCCEEDED") or audit["details"].get("point_count") != 2 * self.context.horizon:

@@ -31,6 +31,7 @@ FIELD_PATTERNS = {
     "wind_v_10m": ("VGRD", "10 m above ground"),
     "temperature_2m": ("TMP", "2 m above ground"),
 }
+_ECCODES_LOCK = Lock()
 
 
 class GfsError(RuntimeError):
@@ -90,7 +91,9 @@ class EccodesDecoder:
         except ImportError as exc:
             raise GfsError("live GFS decoding requires the optional 'eccodes' package") from exc
         self.ec = eccodes
-        self._lock = Lock()
+        # ecCodes has process-wide native state. Separate snapshot workers must
+        # serialize decoding even when they own separate decoder instances.
+        self._lock = _ECCODES_LOCK
 
     def decode(self, message: bytes, latitude: float, longitude: float) -> dict[str, Any]:
         ec = self.ec

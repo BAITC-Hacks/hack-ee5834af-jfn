@@ -1,0 +1,36 @@
+{
+  "training_environment": "NVIDIA Brev brev-ftly7vjxp, CPU LightGBM, 2026-09-23",
+  "first_forecast_origin_assumed": "2026-02-01T00:00:00+05:00",
+  "scada_delay_hours_assumed": 0,
+  "wind_speed_max_mps_assumed": 30,
+  "source_csv_sha256": {
+    "data/training/turbine_1.csv": "c4c341582fb2dd348b7187f0128cff265fe055f469413871ebb5db50eef58b5b",
+    "data/training/turbine_2.csv": "820578cd18bb557cd30c2e102f3ae5a386dfc6c489a5a15743339c2b017305e5"
+  },
+  "training_code_sha256": "b8f57ee01e4ceaffaef6104785942f856506cebdfb5a431f7d5decd0d3d477e6",
+  "training_config_sha256": "5686d9a183a359e1928bc61b436a6d80899ac909a8fc480f8ec36b88b016cca2",
+  "model_sha256": "657b387616cb6dcdc22fe721c7b86aa39dab7b331137fda232dc032de6358807",
+  "training_versions": {
+    "python": "3.12.14",
+    "pandas": "2.3.3",
+    "scikit_learn": "1.9.1",
+    "lightgbm": "4.7.0"
+  },
+  "validation": {
+    "start": "2025-11-01T00:00:00+05:00",
+    "end_exclusive": "2026-02-01T00:00:00+05:00",
+    "hourly_rows": 4402,
+    "turbine_1_rows": 2204,
+    "turbine_2_rows": 2198,
+    "selected_model": "pooled_lgbm",
+    "overall_mae": 0.030807364773109743,
+    "overall_rmse": 0.0668521111032217,
+    "overall_r2": 0.9671333353240467
+  },
+  "limitations": [
+    "Validation used actual historical SCADA wind and temperature, not archived GFS forecast inputs.",
+    "The backend GFS mapping uses instantaneous 100 m wind and 2 m temperature in place of hourly SCADA means; its forecast accuracy is unmeasured.",
+    "SCADA delay and wind-speed upper bound were assumed because the CSV does not document them.",
+    "The final exported model was refit after candidate comparison and has no separate holdout score."
+  ]
+}

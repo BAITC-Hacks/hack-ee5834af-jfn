@@ -155,15 +155,17 @@ class ForecastService:
             snapshot, actual_hash = self.load_snapshot(run["weather_snapshot_id"],context)
             if actual_hash != run["snapshot_hash"]: raise ModelBlocked("registered snapshot changed after run creation")
             model_path = self._registered_model(run["model_id"])
-            model_hash = hashlib.sha256(model_path.read_bytes()).hexdigest() if model_path.is_file() else None
             bundle = load_bundle(model_path,run["model_id"],context)
-            points = predict(bundle,snapshot["points"])
-            if model_hash is not None and hashlib.sha256(model_path.read_bytes()).hexdigest() != model_hash:
+            metadata = bundle.get("metadata") or bundle.get("bundle", {})
+            model_hash = bundle.get("model_sha256") or (hashlib.sha256(model_path.read_bytes()).hexdigest() if model_path.is_file() else None)
+            points = predict(bundle,snapshot["points"],snapshot.get("init_time"))
+            if model_path.is_file() and hashlib.sha256(model_path.read_bytes()).hexdigest() != model_hash:
                 raise ModelBlocked("registered model changed during inference")
             expected = {(p["turbine_id"],parse_timestamp(p["target_start"]),parse_timestamp(p["target_end"])) for p in snapshot["points"]}; actual = {(p["turbine_id"],parse_timestamp(p["target_start"]),parse_timestamp(p["target_end"])) for p in points}
             if len(points) != 2 * run["horizon"] or actual != expected: raise ModelBlocked("model output has incomplete coverage")
-            audit.update({"model_training_cutoff":bundle["training_cutoff"],
+            audit.update({"model_training_cutoff":metadata["training_cutoff"],
                           "model_sha256":model_hash,
+                          "model_kind":bundle["kind"],
                           "point_count":len(points)})
             self.store.compute(run_id,points,audit)
         except Exception as exc: self.store.block(run_id,str(exc),audit)

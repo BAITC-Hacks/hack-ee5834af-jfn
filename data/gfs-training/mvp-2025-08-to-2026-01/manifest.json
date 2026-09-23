@@ -1,0 +1,288 @@
+{
+  "dataset_kind": "archived_noaa_gfs_forecast_to_hourly_scada_power_v1",
+  "origin_policy": {
+    "start_inclusive": "2025-08-04T06:00:00+00:00",
+    "end_exclusive": "2026-01-27T06:00:00+00:00",
+    "step_days": null,
+    "hour_utc": 6,
+    "horizon_hours": 48,
+    "selection": "explicit_historical_subset",
+    "selected_origins": [
+      "2025-08-04T06:00:00Z",
+      "2025-08-11T06:00:00Z",
+      "2025-08-18T06:00:00Z",
+      "2025-08-25T06:00:00Z",
+      "2025-09-01T06:00:00Z",
+      "2025-09-08T06:00:00Z",
+      "2025-11-10T06:00:00Z",
+      "2026-01-05T06:00:00Z",
+      "2026-01-12T06:00:00Z",
+      "2026-01-19T06:00:00Z",
+      "2026-01-26T06:00:00Z"
+    ]
+  },
+  "weather_provider": "noaa_gfs",
+  "availability_basis": "s3_last_modified",
+  "weather_semantics": "instantaneous forecast at target_start",
+  "source_timezone": "Asia/Almaty",
+  "target_aggregation": "mean of six valid 10-minute power readings",
+  "feature_order": [
+    "gfs_wind_u_100m",
+    "gfs_wind_v_100m",
+    "gfs_wind_speed_100m",
+    "gfs_wind_u_10m",
+    "gfs_wind_v_10m",
+    "gfs_wind_speed_10m",
+    "gfs_temperature_2m",
+    "gfs_wind_speed_100m_sq",
+    "gfs_wind_speed_100m_cu",
+    "origin_lead_hours",
+    "gfs_lead_hours",
+    "gfs_init_hour",
+    "target_local_hour",
+    "target_local_month",
+    "target_local_day_of_year",
+    "turbine_id"
+  ],
+  "scada_csv_sha256": {
+    "T1": "c4c341582fb2dd348b7187f0128cff265fe055f469413871ebb5db50eef58b5b",
+    "T2": "820578cd18bb557cd30c2e102f3ae5a386dfc6c489a5a15743339c2b017305e5"
+  },
+  "scada_assumptions": {
+    "scada_delay_hours": 0,
+    "wind_speed_max_mps": 30
+  },
+  "scada_analysis": {
+    "T1": {
+      "file": "turbine_1.csv",
+      "sha256": "c4c341582fb2dd348b7187f0128cff265fe055f469413871ebb5db50eef58b5b",
+      "raw_rows": 142360,
+      "source_columns": [
+        "ID",
+        "Нормализованная активная мощность",
+        "Средняя скорость ветра(m/s)",
+        "Средняя температура окружающей среды(°C)",
+        "Статистическое время"
+      ],
+      "source_timezone": "Asia/Almaty",
+      "ambiguous_or_nonexistent_local_timestamp_rows": 6,
+      "timestamp_policy": "aggregate and split in source-clock time; ambiguous historical UTC instants are not inferred",
+      "missing_by_column": {
+        "timestamp": 0,
+        "wind_speed": 0,
+        "temperature": 0,
+        "power": 0
+      },
+      "duplicate_timestamp_groups": 0,
+      "conflicting_duplicate_groups": 0,
+      "identical_duplicate_groups": 0,
+      "conflicting_duplicate_rows_excluded": 0,
+      "excluded_row_reasons": {
+        "missing_measurement": 0,
+        "wind_out_of_range": 0,
+        "power_out_of_range": 0,
+        "temperature_out_of_range": 0,
+        "off_grid": 0
+      },
+      "unique_rejected_rows": 0,
+      "off_grid_hours": 0,
+      "identical_duplicate_extra_rows_removed": 0,
+      "first_timestamp": "2023-03-11T00:00:00",
+      "last_timestamp": "2026-01-31T23:50:00",
+      "gaps_over_10_minutes": 67,
+      "longest_gap_hours": 999.0,
+      "wind_speed_max_observed_mps": 22.97,
+      "hour_slots": 25392,
+      "tainted_hours": 0,
+      "incomplete_or_tainted_hours": 1725,
+      "retained_hours": 23667
+    },
+    "T2": {
+      "file": "turbine_2.csv",
+      "sha256": "820578cd18bb557cd30c2e102f3ae5a386dfc6c489a5a15743339c2b017305e5",
+      "raw_rows": 149499,
+      "source_columns": [
+        "ID",
+        "Нормализованная активная мощность",
+        "Средняя скорость ветра(m/s)",
+        "Средняя температура окружающей среды(°C)",
+        "Статистическое время"
+      ],
+      "source_timezone": "Asia/Almaty",
+      "ambiguous_or_nonexistent_local_timestamp_rows": 6,
+      "timestamp_policy": "aggregate and split in source-clock time; ambiguous historical UTC instants are not inferred",
+      "missing_by_column": {
+        "timestamp": 0,
+        "wind_speed": 0,
+        "temperature": 0,
+        "power": 0
+      },
+      "duplicate_timestamp_groups": 0,
+      "conflicting_duplicate_groups": 0,
+      "identical_duplicate_groups": 0,
+      "conflicting_duplicate_rows_excluded": 0,
+      "excluded_row_reasons": {
+        "missing_measurement": 0,
+        "wind_out_of_range": 0,
+        "power_out_of_range": 0,
+        "temperature_out_of_range": 0,
+        "off_grid": 0
+      },
+      "unique_rejected_rows": 0,
+      "off_grid_hours": 0,
+      "identical_duplicate_extra_rows_removed": 0,
+      "first_timestamp": "2023-03-11T00:00:00",
+      "last_timestamp": "2026-01-31T23:50:00",
+      "gaps_over_10_minutes": 178,
+      "longest_gap_hours": 57.5,
+      "wind_speed_max_observed_mps": 21.43,
+      "hour_slots": 25392,
+      "tainted_hours": 0,
+      "incomplete_or_tainted_hours": 607,
+      "retained_hours": 24785
+    }
+  },
+  "origins_requested": 11,
+  "origins_complete": 11,
+  "origins_failed": 0,
+  "gfs_cycles": [
+    "2025-08-04T00:00:00Z",
+    "2025-08-11T00:00:00Z",
+    "2025-08-18T00:00:00Z",
+    "2025-08-25T00:00:00Z",
+    "2025-09-01T00:00:00Z",
+    "2025-09-08T00:00:00Z",
+    "2025-11-10T00:00:00Z",
+    "2026-01-05T00:00:00Z",
+    "2026-01-12T00:00:00Z",
+    "2026-01-19T00:00:00Z",
+    "2026-01-26T00:00:00Z"
+  ],
+  "rows": 1056,
+  "missing_power_labels": 0,
+  "dataset_sha256": "888e4a0d52fb9454a334b8f52d8ddde6d9cdae0b4610a1dd423c27599d6f3cc5",
+  "origins": {
+    "2025-08-04T06:00:00Z": {
+      "status": "complete",
+      "gfs_init": "2025-08-04T00:00:00Z",
+      "gfs_available_at": "2025-08-04T04:04:34Z",
+      "gfs_cycle": "2025-08-04T00:00:00Z",
+      "snapshot_sha256": "92248c6aa117436178838d84ed561c46771d3e18b047f3e8bc736a6554f1452b",
+      "snapshot_relpath": "snapshots/noaa-gfs-20250804T060000Z-h48.json",
+      "source_objects": 48,
+      "rows": 96,
+      "missing_power_labels": 0
+    },
+    "2025-08-11T06:00:00Z": {
+      "status": "complete",
+      "gfs_init": "2025-08-11T00:00:00Z",
+      "gfs_available_at": "2025-08-11T04:06:13Z",
+      "gfs_cycle": "2025-08-11T00:00:00Z",
+      "snapshot_sha256": "fdb7c888af495afd774672a701918d755bcf73a8ba6cb2c665f85b2a31d3b464",
+      "snapshot_relpath": "snapshots/noaa-gfs-20250811T060000Z-h48.json",
+      "source_objects": 48,
+      "rows": 96,
+      "missing_power_labels": 0
+    },
+    "2025-08-18T06:00:00Z": {
+      "status": "complete",
+      "gfs_init": "2025-08-18T00:00:00Z",
+      "gfs_available_at": "2025-08-18T04:03:27Z",
+      "gfs_cycle": "2025-08-18T00:00:00Z",
+      "snapshot_sha256": "477707c891f60aa909612c93c20841e0efef658da92500a537d7ed7fe511600d",
+      "snapshot_relpath": "snapshots/noaa-gfs-20250818T060000Z-h48.json",
+      "source_objects": 48,
+      "rows": 96,
+      "missing_power_labels": 0
+    },
+    "2025-08-25T06:00:00Z": {
+      "status": "complete",
+      "gfs_init": "2025-08-25T00:00:00Z",
+      "gfs_available_at": "2025-08-25T04:05:43Z",
+      "gfs_cycle": "2025-08-25T00:00:00Z",
+      "snapshot_sha256": "7772e8bf165a3b34a727a9d4063713c17d9c820fd6dfdf2decdc64702f20c650",
+      "snapshot_relpath": "snapshots/noaa-gfs-20250825T060000Z-h48.json",
+      "source_objects": 48,
+      "rows": 96,
+      "missing_power_labels": 0
+    },
+    "2025-09-01T06:00:00Z": {
+      "status": "complete",
+      "gfs_init": "2025-09-01T00:00:00Z",
+      "gfs_available_at": "2025-09-01T04:02:20Z",
+      "gfs_cycle": "2025-09-01T00:00:00Z",
+      "snapshot_sha256": "b6d6781fe9d4fba33a22dfb35cc75b1ab86859525493006697b746558b864808",
+      "snapshot_relpath": "snapshots/noaa-gfs-20250901T060000Z-h48.json",
+      "source_objects": 48,
+      "rows": 96,
+      "missing_power_labels": 0
+    },
+    "2025-09-08T06:00:00Z": {
+      "status": "complete",
+      "gfs_init": "2025-09-08T00:00:00Z",
+      "gfs_available_at": "2025-09-08T04:03:52Z",
+      "gfs_cycle": "2025-09-08T00:00:00Z",
+      "snapshot_sha256": "adf98b023d06a35e765b287ea24fda609355eef3ff7e46c4fb225c16034a9670",
+      "snapshot_relpath": "snapshots/noaa-gfs-20250908T060000Z-h48.json",
+      "source_objects": 48,
+      "rows": 96,
+      "missing_power_labels": 0
+    },
+    "2025-11-10T06:00:00Z": {
+      "status": "complete",
+      "gfs_init": "2025-11-10T00:00:00Z",
+      "gfs_available_at": "2025-11-10T04:01:51Z",
+      "gfs_cycle": "2025-11-10T00:00:00Z",
+      "snapshot_sha256": "d02f6f37d4018e49ca0ecae6a1a22192da772d506fb9d4c0f4fe62892975f804",
+      "snapshot_relpath": "snapshots/noaa-gfs-20251110T060000Z-h48.json",
+      "source_objects": 48,
+      "rows": 96,
+      "missing_power_labels": 0
+    },
+    "2026-01-05T06:00:00Z": {
+      "status": "complete",
+      "gfs_init": "2026-01-05T00:00:00Z",
+      "gfs_available_at": "2026-01-05T04:01:59Z",
+      "gfs_cycle": "2026-01-05T00:00:00Z",
+      "snapshot_sha256": "d228a2c9ce8bc9807fdda27f93b4d201083e9d44a681c6527dd4d54bbf0f2484",
+      "snapshot_relpath": "snapshots/noaa-gfs-20260105T060000Z-h48.json",
+      "source_objects": 48,
+      "rows": 96,
+      "missing_power_labels": 0
+    },
+    "2026-01-12T06:00:00Z": {
+      "status": "complete",
+      "gfs_init": "2026-01-12T00:00:00Z",
+      "gfs_available_at": "2026-01-12T04:00:22Z",
+      "gfs_cycle": "2026-01-12T00:00:00Z",
+      "snapshot_sha256": "abd57339e8ed17bd691ed10bea904af60a47c72bcc2a84454fceb7825cd14057",
+      "snapshot_relpath": "snapshots/noaa-gfs-20260112T060000Z-h48.json",
+      "source_objects": 48,
+      "rows": 96,
+      "missing_power_labels": 0
+    },
+    "2026-01-19T06:00:00Z": {
+      "status": "complete",
+      "gfs_init": "2026-01-19T00:00:00Z",
+      "gfs_available_at": "2026-01-19T04:02:18Z",
+      "gfs_cycle": "2026-01-19T00:00:00Z",
+      "snapshot_sha256": "2ab29e2356c6895c1d27ed2fb107d70acb474c12a6a043959a8ce6985d8f9406",
+      "snapshot_relpath": "snapshots/noaa-gfs-20260119T060000Z-h48.json",
+      "source_objects": 48,
+      "rows": 96,
+      "missing_power_labels": 0
+    },
+    "2026-01-26T06:00:00Z": {
+      "status": "complete",
+      "gfs_init": "2026-01-26T00:00:00Z",
+      "gfs_available_at": "2026-01-26T03:56:52Z",
+      "gfs_cycle": "2026-01-26T00:00:00Z",
+      "snapshot_sha256": "87c62f43d782174698819b7ae32483eabd6ccd4d9909ee578acd12f724e69e6d",
+      "snapshot_relpath": "snapshots/noaa-gfs-20260126T060000Z-h48.json",
+      "source_objects": 48,
+      "rows": 96,
+      "missing_power_labels": 0
+    }
+  },
+  "origin_list_sha256": "71ca1840a8c97fa55a2ee23bcaa56947bed1414de96e390e2e17ded94ebf6dfa"
+}
