@@ -37,12 +37,12 @@ class WorkflowTests(unittest.TestCase):
         self.store = Store(root / "runs.sqlite3")
         self.service = ForecastService(self.store,self.snapshots,self.models)
         class Recorded:
-            def __init__(self): self.calls = iter([("get_weather_forecast", {"snapshot_id":"gfs-feb6"}), ("validate_inputs", {}), ("run_forecast", {"model_id":"linear-v1"}), ("validate_forecast", {}), ("publish_forecast", {})])
+            def __init__(self, context): self.calls = iter([("get_weather_forecast", {"snapshot_id":context.candidates[0]}), ("validate_inputs", {}), ("run_forecast", {"model_id":context.model_id}), ("validate_forecast", {}), ("publish_forecast", {})])
             def respond(self, *_):
                 try: name,args=next(self.calls)
                 except StopIteration: return {"output":[]}
                 return {"id":"test","output":[{"type":"function_call","name":name,"arguments":json.dumps(args),"call_id":name}]}
-        self.service.operator_factory = lambda service, context, run_id, attempt: ForecastOperator(service, context, Recorded(), run_id=run_id, worker_attempt=attempt)
+        self.service.operator_factory = lambda service, context, run_id, attempt: ForecastOperator(service, context, Recorded(context), run_id=run_id, worker_attempt=attempt)
 
     def native_fixture(self, model_id="synthetic-loader-fixture", cutoff="2026-01-31T00:00:00Z"):
         import lightgbm as lgb
@@ -84,7 +84,7 @@ class WorkflowTests(unittest.TestCase):
 
     def test_missing_model_blocks_without_fabricated_points(self):
         run, _ = self.create(model="missing")
-        self.service.compute_run(run["id"])
+        self.service.process_one()
         result = self.service.get_forecast(run["id"])
         self.assertEqual(result["status"],"BLOCKED")
         self.assertEqual(result["points"],[])
@@ -102,7 +102,7 @@ class WorkflowTests(unittest.TestCase):
     def test_committed_scada_bundle_service_run_records_warning_and_provenance(self):
         shutil.copytree(SCADA, self.models / "brev-scada-pooled-lgbm-20260201")
         run, _ = self.create(model="brev-scada-pooled-lgbm-20260201")
-        self.service.process_one()
+        self.service.compute_run(run["id"])
         result = self.service.get_forecast(run["id"])
         self.assertEqual(result["status"], "SUCCEEDED")
         self.assertEqual(len(result["points"]), 96)
@@ -118,7 +118,7 @@ class WorkflowTests(unittest.TestCase):
         shutil.copytree(SCADA, bundle_dir)
         (bundle_dir / "model.txt").write_text("tampered")
         run, _ = self.create(model="brev-scada-pooled-lgbm-20260201")
-        self.service.process_one()
+        self.service.compute_run(run["id"])
         self.assertIn("SHA-256", self.service.get_forecast(run["id"])["error"])
 
     def test_tampered_scada_schema_blocks(self):
@@ -128,7 +128,7 @@ class WorkflowTests(unittest.TestCase):
         metadata["feature_order"] = list(reversed(metadata["feature_order"]))
         (bundle_dir / "feature_schema.json").write_text(json.dumps(metadata))
         run, _ = self.create(model="brev-scada-pooled-lgbm-20260201")
-        self.service.process_one()
+        self.service.compute_run(run["id"])
         self.assertIn("feature schema", self.service.get_forecast(run["id"])["error"])
 
     def test_symlinked_scada_member_blocks(self):
@@ -142,7 +142,7 @@ class WorkflowTests(unittest.TestCase):
                 self.skipTest("Windows symlink privilege is unavailable")
             raise
         run, _ = self.create(model="brev-scada-pooled-lgbm-20260201")
-        self.service.process_one()
+        self.service.compute_run(run["id"])
         self.assertEqual(self.service.get_forecast(run["id"])["status"], "BLOCKED")
         self.assertIn("escapes registry", self.service.get_forecast(run["id"])["error"])
 

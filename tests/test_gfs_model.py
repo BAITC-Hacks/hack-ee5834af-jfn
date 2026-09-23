@@ -9,12 +9,29 @@ from backend.forecasting import ModelBlocked, load_bundle, predict
 from backend.replay import ReplayContext, parse_timestamp
 from backend.storage import Store
 from backend.workflow import ForecastService
+from backend.agent.operator import ForecastOperator
 
 ROOT = Path(__file__).parents[1]
 MODEL = ROOT / "artifacts/models/gfs-pooled-lgbm-mvp-20260131"
 CURVE = ROOT / "artifacts/models/gfs-power-curve-mvp-20260131"
 SNAPSHOT = ROOT / "data/fixtures/noaa-gfs-20260206T060000Z-h48.json"
 ORIGIN = "2026-02-06T06:00:00Z"
+
+
+class RecordedResponses:
+    def __init__(self, context):
+        self.calls = iter([("get_weather_forecast", {"snapshot_id": context.candidates[0]}),
+                           ("validate_inputs", {}), ("run_forecast", {"model_id": context.model_id}),
+                           ("validate_forecast", {}), ("publish_forecast", {})])
+    def respond(self, *_args):
+        try: name, args = next(self.calls)
+        except StopIteration: return {"output": []}
+        return {"id":"recorded", "output":[{"type":"function_call", "name":name,
+                "arguments":json.dumps(args), "call_id":name}]}
+
+
+def governed(service):
+    return lambda svc, context, run_id, attempt: ForecastOperator(svc, context, RecordedResponses(context), run_id=run_id, worker_attempt=attempt)
 
 
 class GfsModelTests(unittest.TestCase):
@@ -63,6 +80,7 @@ class GfsModelTests(unittest.TestCase):
             shutil.copyfile(SNAPSHOT, snapshots / "gfs-feb6.json")
             shutil.copytree(MODEL, models / MODEL.name)
             service = ForecastService(Store(root / "runs.sqlite3"), snapshots, models)
+            service.operator_factory = governed(service)
             run, _ = service.create_run(as_of=ORIGIN, horizon=48,
                                         model_id=MODEL.name, weather_snapshot_id="gfs-feb6")
             service.process_one()
@@ -80,6 +98,7 @@ class GfsModelTests(unittest.TestCase):
             shutil.copyfile(SNAPSHOT, snapshots / "gfs-feb6-06.json")
             shutil.copytree(CURVE, models / CURVE.name)
             service = ForecastService(Store(root / "runs.sqlite3"), snapshots, models)
+            service.operator_factory = governed(service)
             run, _ = service.create_run(as_of=ORIGIN, horizon=48,
                                         model_id=CURVE.name, weather_snapshot_id="gfs-feb6-06")
             service.process_one()

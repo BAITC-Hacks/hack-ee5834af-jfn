@@ -167,7 +167,7 @@ class ForecastService:
                           "model_sha256":model_hash,
                           "model_kind":bundle["kind"],
                           "point_count":len(points)})
-            self.store.compute(run_id,points,audit)
+            self.store.compute(run_id,points,audit,bundle.get("warning"))
         except Exception as exc: self.store.block(run_id,str(exc),audit)
         return run_id
 
