@@ -27,8 +27,10 @@ export default function App() {
   async function run() {
     controller.current?.abort(); const current = new AbortController(); controller.current = current; setBusy(true); setError(''); setData(null);
     try {
+      const deadline = window.setTimeout(() => current.abort(), 60_000);
       let summary = await adapter.start(request, current.signal);
       while (!terminal.has(summary.status)) { await pollDelay(current.signal); summary = await adapter.status(summary.id, current.signal); }
+      window.clearTimeout(deadline);
       if (summary.status === 'failed') throw new Error(summary.error ?? `Run ${summary.id} failed`);
       const result = await adapter.result(summary.id, current.signal); if (!current.signal.aborted) setData(result);
     } catch (cause) { if (!current.signal.aborted) setError(cause instanceof Error ? cause.message : 'Unable to run forecast'); }
