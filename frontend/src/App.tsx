@@ -33,14 +33,28 @@ export default function App() {
   function exportData(format: 'json' | 'csv') { if (!data) return; const content = format === 'json' ? JSON.stringify(data, null, 2) : ['target_start,turbine_1,turbine_2,is_demo', ...data.forecast.map(p => `${p.targetStart},${p.turbine1},${p.turbine2},${data.isDemo}`)].join('\n'); const url = URL.createObjectURL(new Blob([content], { type: format === 'json' ? 'application/json' : 'text/csv' })); const a = document.createElement('a'); a.href = url; a.download = `${data.run.id}.${format}`; a.click(); URL.revokeObjectURL(url); }
   const cards = [{ label: 'Model version', value: data?.modelVersion }, { label: 'Weather age', value: data?.weatherAge }, { label: 'SCADA freshness', value: data?.scadaFreshness }, { label: 'Temporal validation', value: data?.temporalValidation }];
   const stateLabel = busy ? 'running' : error ? 'error' : data ? data.run.status : 'idle';
-  return <main className="page"><header className="topbar"><div className="brand"><span className="mark">W</span><div><strong>Wind Operator</strong><span>Replay dashboard</span></div></div><div className={`statuses ${error ? 'has-error' : ''}`}><span><i />Backend · {source === 'demo' ? 'local' : stateLabel}</span><span><i />Agent · {source === 'demo' ? 'sample' : stateLabel}</span></div></header>
-    <div className="page-heading"><div><h1>Forecast replay</h1><p>Run a point-in-time forecast and review its source data and execution history.</p></div></div>
-    <ReplayControls request={request} source={source} busy={busy} onRequest={setRequest} onSource={changeSource} onRun={() => void run()} />
-    {source === 'demo' && <div className="demo-banner"><strong>Sample data</strong><span>Displayed values are for interface preview only.</span></div>}
-    {error && <div className="error-state" role="alert"><div><strong>Forecast could not be loaded</strong><span>{error}. No sample data was substituted.</span></div><button onClick={() => void run()}>Retry</button></div>}
-    <section className="metric-grid" aria-label="Run provenance summary">{cards.map(card => <article className="metric" key={card.label}><span>{card.label}</span><strong>{busy ? 'Loading…' : card.value ?? 'Unavailable'}</strong></article>)}</section>
-    {!data && !busy && !error && <div className="empty-state">Choose a source and run a forecast to inspect its evidence.</div>}
-    {data && <><div className="main-grid"><ForecastChart points={data.forecast} isDemo={data.isDemo} /><AgentTimeline events={data.events} /></div><AuditPanel data={data} onExport={exportData} /></>}
-    <footer><span>Wind Operator</span><span>{data ? (data.isDemo ? 'Sample run' : data.run.id) : 'No active run'}</span></footer>
-  </main>;
+  return <div className="app-shell">
+    <aside className="sidebar">
+      <div className="brand"><span className="mark">W</span><div><strong>Wind Operator</strong><span>Operations</span></div></div>
+      <nav aria-label="Primary navigation">
+        <a className="active" href="#dashboard"><span>⌁</span>Dashboard</a>
+        <a href="#replay"><span>↻</span>Replay</a>
+        <a href="#runs"><span>▤</span>Runs</a>
+        <a href="#models"><span>◇</span>Models</a>
+        <a href="#audit"><span>✓</span>Audit log</a>
+      </nav>
+      <div className="sidebar-bottom"><div><span className="status-light" />System available</div><small>Asia/Almaty · UTC+5</small></div>
+    </aside>
+    <main className="workspace" id="dashboard">
+      <header className="topbar"><div><h1>Dashboard</h1><p>Forecast replay and operational trace</p></div><div className={`statuses ${error ? 'has-error' : ''}`}><span><i />Backend · {source === 'demo' ? 'local' : stateLabel}</span><span><i />Agent · {source === 'demo' ? 'sample' : stateLabel}</span></div></header>
+      <div className="dashboard-content">
+        <ReplayControls request={request} source={source} busy={busy} onRequest={setRequest} onSource={changeSource} onRun={() => void run()} />
+        {source === 'demo' && <div className="demo-banner"><strong>Sample data</strong><span>Displayed values are for interface preview only.</span></div>}
+        {error && <div className="error-state" role="alert"><div><strong>Forecast could not be loaded</strong><span>{error}. No sample data was substituted.</span></div><button onClick={() => void run()}>Retry</button></div>}
+        <section className="metric-grid" aria-label="Run provenance summary">{cards.map(card => <article className="metric" key={card.label}><span>{card.label}</span><strong>{busy ? 'Loading…' : card.value ?? 'Unavailable'}</strong></article>)}</section>
+        {!data && !busy && !error && <div className="empty-state">Choose a source and run a forecast to inspect its evidence.</div>}
+        {data && <><div className="main-grid"><ForecastChart points={data.forecast} isDemo={data.isDemo} /><AgentTimeline events={data.events} /></div><AuditPanel data={data} onExport={exportData} /></>}
+      </div>
+    </main>
+  </div>;
 }
