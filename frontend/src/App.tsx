@@ -26,15 +26,15 @@ export default function App() {
 
   async function run() {
     controller.current?.abort(); const current = new AbortController(); controller.current = current; setBusy(true); setError(''); setData(null);
+    let timedOut = false;
+    const deadline = window.setTimeout(() => { if (!current.signal.aborted) { timedOut = true; current.abort(); if (controller.current === current) { setError('Forecast request timed out after 60 seconds'); setBusy(false); } } }, 60_000);
     try {
-      const deadline = window.setTimeout(() => current.abort(), 60_000);
       let summary = await adapter.start(request, current.signal);
       while (!terminal.has(summary.status)) { await pollDelay(current.signal); summary = await adapter.status(summary.id, current.signal); }
-      window.clearTimeout(deadline);
       if (summary.status === 'failed') throw new Error(summary.error ?? `Run ${summary.id} failed`);
       const result = await adapter.result(summary.id, current.signal); if (!current.signal.aborted) setData(result);
-    } catch (cause) { if (!current.signal.aborted) setError(cause instanceof Error ? cause.message : 'Unable to run forecast'); }
-    finally { if (!current.signal.aborted) setBusy(false); }
+    } catch (cause) { if (controller.current === current && (!current.signal.aborted || timedOut)) setError(timedOut ? 'Forecast request timed out after 60 seconds' : cause instanceof Error ? cause.message : 'Unable to run forecast'); }
+    finally { window.clearTimeout(deadline); if (controller.current === current && (!current.signal.aborted || timedOut)) setBusy(false); }
   }
   function changeSource(next: SourceMode) { controller.current?.abort(); setSource(next); setData(null); setError(''); setBusy(false); }
   function exportData(format: 'json' | 'csv') { if (!data) return; const content = format === 'json' ? JSON.stringify(data, null, 2) : ['target_start,turbine_1,turbine_2,is_demo', ...data.forecast.map(p => `${p.targetStart},${p.turbine1},${p.turbine2},${data.isDemo}`)].join('\n'); const url = URL.createObjectURL(new Blob([content], { type: format === 'json' ? 'application/json' : 'text/csv' })); const a = document.createElement('a'); a.href = url; a.download = `${data.run.id}.${format}`; a.click(); URL.revokeObjectURL(url); }
