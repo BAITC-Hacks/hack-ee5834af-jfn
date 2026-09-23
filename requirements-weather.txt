@@ -1,0 +1,2 @@
+# Optional live NOAA GFS decoding dependency. Tests use an injected decoder.
+eccodes>=2.44,<3

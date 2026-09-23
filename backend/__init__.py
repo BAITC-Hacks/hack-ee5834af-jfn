@@ -1,0 +1,1 @@
+"""Wind forecast backend."""
