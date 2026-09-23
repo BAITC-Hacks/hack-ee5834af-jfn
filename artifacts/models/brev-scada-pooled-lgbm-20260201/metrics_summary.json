@@ -1,0 +1,26 @@
+{
+  "source": "Brev artifacts/metrics.json from the 2026-09-23 CPU run",
+  "validation_period_local": ["2025-11-01T00:00:00+05:00", "2026-02-01T00:00:00+05:00"],
+  "validation_rows": {"turbine_1": 2204, "turbine_2": 2198, "overall": 4402},
+  "validation_row_key_sha256": "7cca5e8cb8e898efb8a640eadab8680a463e8e93a6504acd20561c5c7f390f83",
+  "selection_rule": "lowest mean turbine MAE; ties prefer power_curve, pooled_lgbm, separate_lgbm",
+  "winner": "pooled_lgbm",
+  "candidates": {
+    "power_curve": {
+      "turbine_1": {"mae": 0.04488460190178794, "rmse": 0.07276010003819183, "r2": 0.9612577470112258},
+      "turbine_2": {"mae": 0.044870217713627585, "rmse": 0.08150599322521968, "r2": 0.9508864870116654},
+      "overall": {"mae": 0.044877419610652905, "rmse": 0.07725095505571274, "r2": 0.9561132828084757}
+    },
+    "pooled_lgbm": {
+      "turbine_1": {"mae": 0.031088994726509084, "rmse": 0.06155872127611257, "r2": 0.9722682371554335},
+      "turbine_2": {"mae": 0.03052496603912787, "rmse": 0.07176899640396046, "r2": 0.9619201124040547},
+      "overall": {"mae": 0.030807364773109743, "rmse": 0.0668521111032217, "r2": 0.9671333353240467}
+    },
+    "separate_lgbm": {
+      "turbine_1": {"mae": 0.03293133938471939, "rmse": 0.07092339616979465, "r2": 0.9631890229307799},
+      "turbine_2": {"mae": 0.029356983415771275, "rmse": 0.07103260948434201, "r2": 0.9626975419972724},
+      "overall": {"mae": 0.031146597353881603, "rmse": 0.07097794940296873, "r2": 0.9629513593709964}
+    }
+  },
+  "limitation": "Metrics used actual historical SCADA wind and temperature. They are conditional estimates, not an archived GFS forecast backtest. The exported model was refit after comparison and has no separate holdout score."
+}
