@@ -32,7 +32,7 @@ def main() -> None:
                         help="Registered candidate ID, newest first; repeat for fallback")
     parser.add_argument("--execution", choices=("live", "recorded"), required=True)
     parser.add_argument("--trace-file", help="JSON output from a prior run, required for recorded mode")
-    parser.add_argument("--openai-model", default="gpt-4.1-mini")
+    parser.add_argument("--openai-model", default="gpt-6-luna")
     parser.add_argument("--inject-unavailable", action="append", default=[],
                         help="Explicit demo source failure; never use for operational runs")
     parser.add_argument("--service-fixture", action="store_true",

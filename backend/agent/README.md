@@ -26,7 +26,9 @@ valid snapshot second. No synthetic weather values or February SCADA are needed.
 ## Live smoke
 
 Register a real snapshot and a compatible model bundle in the server-controlled
-directories. Set `OPENAI_API_KEY` only in the local process environment. Then run:
+directories. Set `OPENAI_API_KEY` in the local process environment or the
+Git-ignored repository `.env`. The operator defaults to `gpt-6-luna` with
+Responses function calling. Then run:
 
 ```text
 python -m backend.agent.demo --database data/runtime/agent.sqlite3 \
@@ -43,3 +45,5 @@ For offline replay of a saved JSON output, pass `--execution recorded
 was not demonstrated. The default budget is 10 tool calls and 45 seconds.
 `tests/fixtures/agent-live-smoke-recorded.json` is a saved tool-call trace from
 the `gpt-4.1-mini` smoke, explicitly marked `recorded` and `service_fixture`.
+`tests/fixtures/agent-luna-live-smoke-recorded.json` records the corresponding
+`gpt-6-luna` smoke with the same labels.

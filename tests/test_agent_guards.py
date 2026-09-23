@@ -1,14 +1,16 @@
 import json
+import os
 import shutil
 import tempfile
 import unittest
 from datetime import timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 from backend.api.app import create_app
-from backend.agent.operator import ForecastOperator, OpenAIUnavailable
+from backend.agent.operator import ForecastOperator, OpenAIResponses, OpenAIUnavailable
 from backend.agent.tools import AgentTools, RunContext, tool_schemas
 from backend.forecasting.adapter import FEATURES
 from backend.replay import parse_timestamp
@@ -18,6 +20,7 @@ from backend.workflow import ForecastService
 
 FIXTURE = Path(__file__).parents[1] / "data/fixtures/noaa-gfs-20260206T000000Z-h48.json"
 RECORDED = Path(__file__).parent / "fixtures/agent-live-smoke-recorded.json"
+RECORDED_LUNA = Path(__file__).parent / "fixtures/agent-luna-live-smoke-recorded.json"
 
 
 class FakeResponses:
@@ -105,20 +108,22 @@ class AgentGuardTests(unittest.TestCase):
         self.assertIn("injected demo failure", result.trace[0]["outcome"]["reason"])
 
     def test_saved_live_trace_replays_offline_as_recorded(self):
-        source = json.loads(RECORDED.read_text())
-        self.assertTrue(source["recorded"])
-        self.assertEqual(source["source_execution"], "live_openai")
         shutil.copyfile(FIXTURE, self.service.snapshot_dir / "gfs-20260205-18z.json")
         bundle = json.loads((self.service.model_dir / "linear-v1.json").read_text())
         bundle["model_id"] = "service-fixture-linear-v1"
         (self.service.model_dir / "service-fixture-linear-v1.json").write_text(json.dumps(bundle))
         context = RunContext(self.context.as_of, 48, "service-fixture-linear-v1",
                              ("gfs-fresh-unavailable", "gfs-20260205-18z"))
-        calls = [(entry["tool"], entry["arguments"]) for entry in source["trace"]]
-        result = ForecastOperator(self.service, context,
-                                  unavailable=frozenset({"gfs-fresh-unavailable"})).run_recorded(calls)
-        self.assertEqual(result.execution, "recorded")
-        self.assertTrue(result.published)
+        for path in (RECORDED, RECORDED_LUNA):
+            with self.subTest(path=path.name):
+                source = json.loads(path.read_text())
+                self.assertTrue(source["recorded"])
+                self.assertEqual(source["source_execution"], "live_openai")
+                calls = [(entry["tool"], entry["arguments"]) for entry in source["trace"]]
+                result = ForecastOperator(self.service, context,
+                                          unavailable=frozenset({"gfs-fresh-unavailable"})).run_recorded(calls)
+                self.assertEqual(result.execution, "recorded")
+                self.assertTrue(result.published)
 
     def test_critical_temporal_failure_cannot_be_overridden_by_model(self):
         snapshot = json.loads(FIXTURE.read_text())
@@ -197,6 +202,14 @@ class AgentGuardTests(unittest.TestCase):
             self.assertEqual(set(parameters["required"]), set(parameters["properties"]))
             self.assertNotIn("as_of", parameters["properties"])
             self.assertNotIn("normalized_power", parameters["properties"])
+
+    def test_luna_default_reads_local_env_without_exposing_key(self):
+        env_file = self.root / ".env"
+        env_file.write_text("OPENAI_API_KEY=example-local-secret\n")
+        with patch.dict(os.environ, {"OPENAI_API_KEY": ""}):
+            client = OpenAIResponses(env_file=env_file)
+            self.assertEqual(client.model, "gpt-6-luna")
+            self.assertEqual(client._api_key(), "example-local-secret")
 
     def test_recalculation_uses_only_server_approved_new_origin(self):
         snapshot = json.loads(FIXTURE.read_text())

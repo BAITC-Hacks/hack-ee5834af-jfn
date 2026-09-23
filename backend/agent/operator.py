@@ -6,6 +6,7 @@ import json
 import os
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 from urllib import error, request
 
@@ -20,19 +21,32 @@ class OpenAIUnavailable(RuntimeError):
 
 
 class OpenAIResponses:
-    """Minimal HTTP transport; the API key is only read from the process environment."""
+    """Minimal HTTP transport; the key stays in process memory or local .env."""
 
-    def __init__(self, model: str = "gpt-4.1-mini"):
+    def __init__(self, model: str = "gpt-6-luna", env_file: str | Path | None = None):
         self.model = model
+        self.env_file = Path(env_file) if env_file is not None else Path(__file__).resolve().parents[2] / ".env"
+
+    def _api_key(self) -> str:
+        key = os.environ.get("OPENAI_API_KEY")
+        if key:
+            return key
+        if self.env_file.is_file():
+            for line in self.env_file.read_text(encoding="utf-8-sig").splitlines():
+                name, separator, value = line.strip().partition("=")
+                if separator and name == "OPENAI_API_KEY":
+                    value = value.strip().strip('"').strip("'")
+                    if value:
+                        return value
+        raise OpenAIUnavailable("OPENAI_API_KEY is not set in the process environment or local .env")
 
     def respond(self, input_items: list[dict[str, Any]],
                 tools: list[dict[str, Any]], timeout: float) -> dict[str, Any]:
-        key = os.environ.get("OPENAI_API_KEY")
-        if not key:
-            raise OpenAIUnavailable("OPENAI_API_KEY is not set in the process environment")
+        key = self._api_key()
         payload = {"model": self.model, "instructions": SYSTEM_PROMPT,
                    "input": input_items, "tools": tools, "store": False,
-                   "parallel_tool_calls": False, "max_output_tokens": 600}
+                   "parallel_tool_calls": False, "max_output_tokens": 600,
+                   "reasoning": {"effort": "none"}}
         data = json.dumps(payload).encode("utf-8")
         http_request = request.Request("https://api.openai.com/v1/responses", data=data,
                                        headers={"Authorization": "Bearer " + key,
@@ -51,6 +65,7 @@ class OpenAIResponses:
 @dataclass
 class OperatorResult:
     execution: str
+    openai_model: str | None
     published: bool
     run_id: str | None
     reason: str
@@ -58,7 +73,8 @@ class OperatorResult:
     forecast: dict[str, Any] | None
 
     def to_json(self) -> dict[str, Any]:
-        return {"execution": self.execution, "published": self.published,
+        return {"execution": self.execution, "openai_model": self.openai_model,
+                "published": self.published,
                 "run_id": self.run_id, "reason": self.reason,
                 "trace": self.trace, "forecast": self.forecast}
 
@@ -82,7 +98,8 @@ class ForecastOperator:
     def _result(self, tools: AgentTools, execution: str, reason: str) -> OperatorResult:
         tools.decision(reason, execution)
         forecast = self.service.get_forecast(tools.run_id) if tools.run_id else None
-        return OperatorResult(execution, tools.published, tools.run_id, reason,
+        model = getattr(self.client, "model", None) if execution == "live_openai" else None
+        return OperatorResult(execution, model, tools.published, tools.run_id, reason,
                               list(tools.trace), forecast)
 
     def run_live(self, *, allow_fallback: bool = True) -> OperatorResult:
