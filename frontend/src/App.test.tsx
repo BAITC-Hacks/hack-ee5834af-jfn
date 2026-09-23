@@ -23,7 +23,8 @@ describe('dashboard', () => {
   });
 
   it('clears an in-flight API run when the source changes', async () => {
-    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => undefined)));
+    let requestSignal: AbortSignal | undefined;
+    vi.stubGlobal('fetch', vi.fn((_url: string, init?: RequestInit) => { requestSignal = init?.signal ?? undefined; return new Promise(() => undefined); }));
     render(<App />);
     await screen.findByText(/Two-turbine forecast/i);
     const source = screen.getByLabelText(/Data source/i);
@@ -31,6 +32,7 @@ describe('dashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: /Run forecast/i }));
     expect(screen.getByRole('button', { name: /Running/i })).toBeDisabled();
     fireEvent.change(source, { target: { value: 'demo' } });
+    expect(requestSignal?.aborted).toBe(true);
     expect(screen.getByRole('button', { name: /Run forecast/i })).toBeEnabled();
     expect(screen.queryByText(/Two-turbine forecast/i)).not.toBeInTheDocument();
   });

@@ -9,26 +9,27 @@ import type { DashboardData, ReplayRequest, SourceMode } from './types';
 
 const api = createApiAdapter(import.meta.env.VITE_API_BASE_URL ?? '/api');
 const terminal = new Set(['succeeded', 'failed']);
+function pollDelay(signal: AbortSignal) { return new Promise<void>((resolve, reject) => { const timer = window.setTimeout(resolve, 900); signal.addEventListener('abort', () => { window.clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }, { once: true }); }); }
 
 export default function App() {
   const [source, setSource] = useState<SourceMode>('demo');
   const [request, setRequest] = useState<ReplayRequest>({ asOf: '2026-02-06T00:00:00+05:00', horizon: 48 });
   const [data, setData] = useState<DashboardData | null>(null); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
-  const generation = useRef(0); const adapter = useMemo(() => source === 'demo' ? demoAdapter : api, [source]);
-  useEffect(() => () => { generation.current += 1; }, []);
+  const controller = useRef<AbortController | null>(null); const adapter = useMemo(() => source === 'demo' ? demoAdapter : api, [source]);
+  useEffect(() => () => controller.current?.abort(), []);
   useEffect(() => { void run(); /* initial reviewable fixture */ }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function run() {
-    const currentGeneration = ++generation.current; setBusy(true); setError(''); setData(null);
+    controller.current?.abort(); const current = new AbortController(); controller.current = current; setBusy(true); setError(''); setData(null);
     try {
-      let summary = await adapter.start(request);
-      while (!terminal.has(summary.status)) { await new Promise(r => window.setTimeout(r, 900)); if (generation.current !== currentGeneration) return; summary = await adapter.status(summary.id); }
+      let summary = await adapter.start(request, current.signal);
+      while (!terminal.has(summary.status)) { await pollDelay(current.signal); summary = await adapter.status(summary.id, current.signal); }
       if (summary.status === 'failed') throw new Error(`Run ${summary.id} failed`);
-      const result = await adapter.result(summary.id); if (generation.current === currentGeneration) setData(result);
-    } catch (cause) { if (generation.current === currentGeneration) setError(cause instanceof Error ? cause.message : 'Unable to run forecast'); }
-    finally { if (generation.current === currentGeneration) setBusy(false); }
+      const result = await adapter.result(summary.id, current.signal); if (!current.signal.aborted) setData(result);
+    } catch (cause) { if (!current.signal.aborted) setError(cause instanceof Error ? cause.message : 'Unable to run forecast'); }
+    finally { if (!current.signal.aborted) setBusy(false); }
   }
-  function changeSource(next: SourceMode) { generation.current += 1; setSource(next); setData(null); setError(''); setBusy(false); }
+  function changeSource(next: SourceMode) { controller.current?.abort(); setSource(next); setData(null); setError(''); setBusy(false); }
   function exportData(format: 'json' | 'csv') { if (!data) return; const content = format === 'json' ? JSON.stringify(data, null, 2) : ['target_start,turbine_1,turbine_2,is_demo', ...data.forecast.map(p => `${p.targetStart},${p.turbine1},${p.turbine2},${data.isDemo}`)].join('\n'); const url = URL.createObjectURL(new Blob([content], { type: format === 'json' ? 'application/json' : 'text/csv' })); const a = document.createElement('a'); a.href = url; a.download = `${data.run.id}.${format}`; a.click(); URL.revokeObjectURL(url); }
   const cards = [{ label: 'Model version', value: data?.modelVersion }, { label: 'Weather age', value: data?.weatherAge }, { label: 'SCADA freshness', value: data?.scadaFreshness }, { label: 'Temporal validation', value: data?.temporalValidation }];
   const stateLabel = busy ? 'running' : error ? 'error' : data ? data.run.status : 'idle';

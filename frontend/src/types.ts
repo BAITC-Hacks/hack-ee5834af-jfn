@@ -11,7 +11,7 @@ export interface DashboardData {
   temporalValidation?: string; forecast: ForecastPoint[]; audit: AuditItem[]; warnings: string[]; events: AgentEvent[];
 }
 export interface DashboardAdapter {
-  start(request: ReplayRequest): Promise<RunSummary>;
-  status(runId: string): Promise<RunSummary>;
-  result(runId: string): Promise<DashboardData>;
+  start(request: ReplayRequest, signal?: AbortSignal): Promise<RunSummary>;
+  status(runId: string, signal?: AbortSignal): Promise<RunSummary>;
+  result(runId: string, signal?: AbortSignal): Promise<DashboardData>;
 }
