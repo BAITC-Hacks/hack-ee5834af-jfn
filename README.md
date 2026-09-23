@@ -5,147 +5,174 @@
 <h1 align="center">Mangust</h1>
 
 <p align="center">
-  <strong>An auditable AI forecasting operator for wind power.</strong>
+  <strong>Agentic AI operator for 24–48 hour wind-power forecasting.</strong>
 </p>
 
 <p align="center">
   <img alt="HackAlem AI" src="https://img.shields.io/badge/HackAlem%20AI-Energy-111111">
-  <img alt="Python" src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white">
-  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white">
-  <img alt="React" src="https://img.shields.io/badge/React-TypeScript-61DAFB?logo=react&logoColor=111111">
-  <img alt="LightGBM" src="https://img.shields.io/badge/Forecasting-LightGBM-7DBE31">
+  <img alt="OpenAI" src="https://img.shields.io/badge/Agent-OpenAI-000000?logo=openai&logoColor=white">
+  <img alt="LightGBM" src="https://img.shields.io/badge/Forecast-LightGBM-7DBE31">
   <img alt="NOAA GFS" src="https://img.shields.io/badge/Weather-NOAA%20GFS-0057B8">
+  <img alt="FastAPI" src="https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white">
+  <img alt="React" src="https://img.shields.io/badge/UI-React%20%2B%20TypeScript-61DAFB?logo=react&logoColor=111111">
 </p>
 
-## Predict the wind without seeing the future
+## From weather forecast to an approved power forecast
 
-Mangust forecasts normalized wind-turbine power for the next **24–48 hours** while reconstructing exactly what information was available at the forecast origin.
+Mangust is an autonomous forecasting operator for wind farms. It reconstructs the information that was actually available at a selected point in time, obtains the corresponding archived NOAA GFS weather forecast, runs the numerical forecasting engine, validates the result, and publishes a complete 24–48 hour power forecast only after the workflow passes the publication gate.
 
-A historical replay does not use tomorrow's observed weather. It selects an archived NOAA GFS forecast that was actually available at the simulated `as_of` time, validates temporal boundaries, runs the forecast workflow, and keeps a provenance trail for every result.
+For a 48-hour run with two turbines, Mangust produces:
 
-That makes a run answerable, not just reproducible:
+```text
+48 forecast hours × 2 turbines = 96 turbine-hour predictions
+```
 
-- Which weather cycle was used?
-- When did it become available?
-- Which model produced the forecast?
-- What was the training cutoff?
-- Were all 48 forecast hours present?
-- Did any future information leak into the run?
+Every forecast is accompanied by its weather snapshot, model version, hashes, temporal checks, agent tool trace, warnings, and immutable run history.
 
-## What Mangust does
-
-- **Forecasts two wind turbines** with hourly output for 24 or 48 hours.
-- **Replays historical forecasts point-in-time** instead of substituting future observations.
-- **Fetches archived NOAA GFS weather** and verifies availability before the forecast origin.
-- **Rejects invalid or incomplete inputs** instead of fabricating power values.
-- **Stores immutable forecast runs** with forecast points, audit metadata, warnings, and lifecycle events.
-- **Creates a new revision when eligible weather changes** without mutating the previous forecast.
-- **Exposes the workflow through FastAPI** and a React/TypeScript operations dashboard.
-- **Keeps numerical forecasting separate from the AI operator**: the agent may orchestrate tools, but it does not invent turbine power.
-
-## How it works
+## How Mangust works
 
 ```mermaid
 flowchart LR
     A["Forecast origin<br/>AS OF"] --> B["Archived NOAA GFS"]
-    B --> C["Temporal validation"]
-    C --> D["Feature pipeline"]
-    D --> E["Forecast engine"]
-    E --> F["Output validation"]
-    F --> G["Immutable ForecastRun"]
-    G --> H["Audit + events"]
-    G --> I["Mangust dashboard"]
+    B --> C["Point-in-time validation"]
+    C --> D["OpenAI Operator"]
 
-    J["OpenAI operator"] -. bounded tool calls .-> C
-    J -. bounded tool calls .-> E
-    J -. publish / recalculate .-> G
+    D --> E["get_weather_forecast"]
+    E --> F["validate_inputs"]
+    F --> G["run_forecast"]
+    G --> H["GFS-trained LightGBM"]
+    H --> I["validate_forecast"]
+    I --> J["publish_forecast"]
+
+    J --> K["96 forecast points"]
+    J --> L["Audit & provenance"]
+    J --> M["Mangust dashboard"]
+
+    N["New approved inputs"] --> O["request_recalculation"]
+    O --> P["Immutable child revision"]
 ```
 
-The deterministic guards remain authoritative. A model or agent cannot override a failed temporal check.
+The OpenAI model orchestrates the workflow through strict server-owned tools. Numerical turbine power comes from the forecasting engine, while publication remains protected by deterministic validation.
 
-## Forecast Replay
+## The agentic workflow
 
-The defining feature is the **AS OF time machine**.
+Mangust uses the OpenAI Responses API with a bounded tool loop. For each run, the operator receives an immutable context: forecast origin, horizon, registered model, and server-approved weather candidates.
 
-For a run such as:
+The normal live sequence is:
 
 ```text
-AS OF:            2026-02-06 00:00 UTC
-Horizon:          48 hours
-Weather cycle:    latest complete GFS cycle available before AS OF
-Targets:          48 hourly intervals × 2 turbines
+1. get_weather_forecast
+2. validate_inputs
+3. run_forecast
+4. validate_forecast
+5. publish_forecast
 ```
 
-Mangust validates that every selected weather object was available no later than the forecast origin. GFS initialization time alone is not considered sufficient evidence.
+A sixth tool, `request_recalculation`, creates a linked immutable revision when newer approved inputs become available.
 
-A successful run produces:
+The agent cannot change `as_of`, replace the registered model, invent weather sources, or bypass validation. The final publish gate rechecks the forecast context, model fingerprint, weather snapshot, coverage, and point count independently of the LLM.
+
+A live configured-key smoke run completed all five OpenAI tool calls and published a full **96-point GFS forecast**.
+
+## Forecast Replay — a time machine for energy forecasting
+
+The core of Mangust is point-in-time replay.
+
+Choose a historical origin such as:
 
 ```text
-48 hours × 2 turbines = 96 forecast points
+2026-02-06 06:00 UTC
 ```
 
-together with the weather snapshot ID, hashes, model metadata, cutoffs, warnings, and run events.
+and Mangust rebuilds the forecast exactly from the information allowed at that moment.
 
-## No-future-data policy
+It does not simply check the GFS initialization timestamp. The weather layer verifies availability of the archived GRIB data and index objects before the simulated forecast origin, then records their provenance and hashes.
 
-Historical evaluation is only useful if the system cannot quietly look ahead.
+This lets the system answer:
 
-Mangust enforces four boundaries:
+- which GFS cycle was used;
+- when the source became available;
+- which model bundle produced the forecast;
+- which training cutoff applied;
+- whether the complete 24/48-hour horizon was present;
+- which OpenAI tools were executed;
+- which validation gate approved publication.
 
-1. **Weather availability** — archived forecast objects must be available by `as_of`.
-2. **SCADA availability** — only completed and available historical intervals may be selected.
-3. **Model cutoff** — training/preprocessing artifacts must respect the replay boundary.
-4. **Immutable runs** — new inputs create a child revision instead of rewriting history.
+## Forecasting engine
 
-> [!IMPORTANT]
-> Historical observations or reanalysis are never presented as archived operational forecasts.
+Mangust includes dedicated forecast bundles trained and packaged for CPU inference.
 
-## Model evaluation
+The repository contains:
 
-The project deliberately separates two different questions:
+- `gfs-pooled-lgbm-mvp-20260131` — GFS-trained pooled LightGBM;
+- `gfs-power-curve-mvp-20260131` — GFS power-curve benchmark;
+- `brev-scada-pooled-lgbm-20260201` — SCADA-trained reference model.
 
-**Conditional model accuracy** asks how well turbine power can be reconstructed when observed local weather is already known.
+The production feature contract for the GFS LightGBM is shared between training and serving, so backend inference builds the same feature schema used by the training pipeline.
 
-**Operational forecasting accuracy** asks how well turbine power is predicted from weather forecasts that were available 24–48 hours earlier.
+Model bundles include their schema, training cutoff, metadata, checksums, and model fingerprint. The backend refuses incompatible or modified bundles instead of silently producing a forecast.
 
-Only the second is representative of the production forecasting scenario.
+## Live OpenAI execution in the dashboard
 
-The evaluation pipeline therefore uses chronological forecast origins, preserves the forecast horizon, and prevents future labels or weather observations from entering predictor features.
+The dashboard shows the real backend-recorded agent execution while a run is still in progress.
 
-> [!NOTE]
-> The supplied SCADA files end on 31 January 2026. February ground truth is not included, so Mangust does not fabricate February accuracy metrics.
+The operator panel displays:
+
+```text
+Weather source selected
+Inputs validated
+GFS LightGBM numerical forecast
+Forecast validated
+Publication approved
+```
+
+Each step transitions from waiting → running → completed using actual backend events. The numerical forecast stays private until publication is approved, then the two-turbine chart and audit become available together.
+
+The UI also provides:
+
+- 24 / 48 hour replay controls;
+- two-turbine forecast chart;
+- model and provenance cards;
+- OpenAI tool timeline;
+- audit evidence;
+- warning and revision history;
+- JSON / CSV export;
+- English and Kazakh interface.
+
+## Immutable forecasts and automatic revisions
+
+Forecast history is append-only.
+
+If a newer eligible weather snapshot appears, Mangust creates a child run with `parent_run_id` instead of modifying the previous forecast.
+
+```text
+ForecastRun A
+    │
+    └── new approved weather
+             │
+             ▼
+        ForecastRun B
+        parent = A
+```
+
+This makes the forecasting process traceable from the first prediction through every recalculation.
 
 ## Architecture
 
-| Layer | Responsibility |
+| Layer | What it does |
 | --- | --- |
-| NOAA GFS adapter | Point-in-time archived weather acquisition and provenance |
-| Replay engine | Immutable `as_of`, horizon, cutoff and no-leakage rules |
-| Forecast engine | Numerical turbine power forecast |
-| Validation | Input/output completeness, temporal checks and blocking conditions |
-| FastAPI + worker | Durable forecast jobs, revisions, audit and events |
-| SQLite | Forecast runs, points, jobs and event persistence |
-| OpenAI operator | Bounded orchestration of validated forecasting tools |
-| React dashboard | Replay controls, forecast chart, provenance, warnings and activity |
+| **NOAA GFS adapter** | Finds and decodes archived operational weather forecasts |
+| **Replay engine** | Enforces `as_of`, horizon, source availability and temporal boundaries |
+| **OpenAI Operator** | Orchestrates the forecasting workflow with strict function tools |
+| **Forecast engine** | Runs GFS-trained LightGBM / registered forecast bundles |
+| **Publication gate** | Revalidates model, snapshot, coverage and immutable context |
+| **FastAPI worker** | Executes forecast runs and durable background jobs |
+| **SQLite** | Stores runs, points, jobs, events and revision history |
+| **React dashboard** | Shows forecasts, live agent steps, provenance and audit |
 
-## Current implementation status
+## Reproducible demo
 
-- ✅ Point-in-time NOAA GFS replay with availability checks
-- ✅ 24/48-hour weather coverage validation
-- ✅ Immutable ForecastRun API and durable worker
-- ✅ Automatic child revisions for eligible updated weather
-- ✅ Audit trail, hashes and lifecycle events
-- ✅ React/TypeScript dashboard for two turbines
-- ✅ English / Kazakh interface
-- ✅ JSON / CSV forecast export
-- 🚧 Native forecasting model integration and operational GFS evaluation
-- 🚧 Guarded OpenAI tool orchestration
-
-The deterministic replay/backend path is intentionally usable independently of the LLM layer.
-
-## Quick start
-
-### Backend
+### 1. Create the environment
 
 Python 3.11–3.13 is recommended.
 
@@ -155,64 +182,69 @@ cd hack-ee5834af-jfn
 
 python -m venv .venv
 source .venv/bin/activate
-
-pip install -r requirements-backend.txt
-uvicorn backend.api.app:app --host 127.0.0.1 --port 8011
+pip install -r requirements-backend.txt -r requirements-weather.txt
 ```
 
-On Windows, activate the environment with:
+On Windows:
 
 ```powershell
 .venv\Scripts\Activate.ps1
 ```
 
-### Frontend
+### 2. Register the GFS model and archived snapshot
 
 ```bash
-npm --prefix frontend install
+mkdir -p data/runtime/models data/runtime/snapshots
+
+cp -R artifacts/models/gfs-pooled-lgbm-mvp-20260131 \
+  data/runtime/models/
+
+cp data/fixtures/noaa-gfs-20260206T060000Z-h48.json \
+  data/runtime/snapshots/gfs-feb6-06.json
+```
+
+### 3. Start the backend with OpenAI
+
+```bash
+export OPENAI_API_KEY="your-key"
+export FORECAST_DATA_DIR="data/runtime"
+
+uvicorn backend.api.app:app --host 127.0.0.1 --port 8011
+```
+
+### 4. Start the dashboard
+
+```bash
+VITE_MODEL_ID=gfs-pooled-lgbm-mvp-20260131 \
+VITE_WEATHER_SNAPSHOT_ID=gfs-feb6-06 \
 npm --prefix frontend run dev
 ```
 
-The Vite development server proxies `/api` to the local backend on port `8011`.
+Open the Vite URL and run the default 48-hour replay.
 
-For a UI-only preview, choose **Sample data** in the dashboard. Sample values are explicitly marked and are never substituted after a real API failure.
+## Replay without the UI
 
-## Reproduce a historical weather replay
-
-A committed fixture can be validated without downloading live NOAA data:
+Mangust can also reproduce archived weather inputs directly:
 
 ```bash
 python replay.py \
-  --as-of "2026-02-06T00:00:00Z" \
+  --as-of "2026-02-06T06:00:00Z" \
   --horizon 48 \
-  --snapshot data/fixtures/noaa-gfs-20260206T000000Z-h48.json \
+  --snapshot data/fixtures/noaa-gfs-20260206T060000Z-h48.json \
   --output-dir artifacts/replay-2026-02-06
 ```
 
-The command writes:
-
-```text
-artifacts/replay-2026-02-06/
-└── weather-inputs-audit.json
-```
-
-To fetch archived GFS data directly, install the optional decoder:
-
-```bash
-pip install -r requirements-weather.txt
-```
-
-and run the replay without `--snapshot`.
+For live archive acquisition, omit `--snapshot`; the NOAA GFS adapter downloads the admissible archived forecast and records its provenance.
 
 ## Forecast API
 
-Create a run with registered model and weather snapshot IDs:
+Create a forecast run:
 
 ```http
 POST /forecast-runs
 ```
 
-Read the immutable result through:
+Inspect it through:
 
 ```text
 GET /forecast-runs/{id}
@@ -222,75 +254,98 @@ GET /forecast-runs/{id}/events
 GET /health
 ```
 
-A recalculation creates a linked revision:
+Create a recalculation as a new immutable revision:
 
 ```text
 POST /forecast-runs/{id}/recalculate
 ```
 
-If the model, schema, cutoff, or snapshot is incompatible, the run is blocked and no synthetic power values are returned.
-
 ## Verification
 
-Backend tests:
+The integrated GFS + OpenAI route has been exercised end-to-end with a real configured OpenAI key.
+
+Latest integration validation includes:
+
+```text
+68 backend tests
+10 frontend tests
+frontend build
+frontend lint
+agent guard tests
+live 5-tool OpenAI smoke
+96 published GFS forecast points
+```
+
+Run the suites locally:
 
 ```bash
 python -m unittest discover -s tests -v
-```
 
-Frontend:
-
-```bash
 npm --prefix frontend run test -- --run
 npm --prefix frontend run lint
 npm --prefix frontend run build
 ```
 
-The most important integration invariant is:
+## Why the architecture matters
+
+A conventional forecasting demo is often:
 
 ```text
-48 forecast hours
-× 2 turbines
-= 96 complete, finite turbine-hour predictions
+CSV → model → graph
 ```
+
+Mangust is an operational workflow:
+
+```text
+historical origin
+    ↓
+weather that actually existed then
+    ↓
+temporal validation
+    ↓
+OpenAI tool orchestration
+    ↓
+GFS-trained numerical forecast
+    ↓
+deterministic publication gate
+    ↓
+immutable forecast + audit
+    ↓
+automatic revision when inputs change
+```
+
+That turns the model output into a forecast that can be inspected, replayed, traced and reproduced.
+
+## HackAlem AI criteria
+
+| Criterion | Mangust evidence |
+| --- | --- |
+| **Task fit & workability · 25** | Hourly 24–48h forecasts for two turbines, archived weather replay, complete 96-point forecast runs |
+| **Technical implementation · 25** | GFS-trained model serving, live OpenAI tool orchestration, deterministic publication gate, durable worker and immutable revisions |
+| **README & reproducibility · 25** | Committed fixtures, model bundles, hashes, CLI replay, documented API, automated test suites |
+| **Value & applicability · 15** | End-to-end wind-power forecast operations with live validation, provenance and automatic recalculation |
+| **Development potential & originality · 10** | Point-in-time forecast time machine, live agent trace, model governance and auditable revision history |
 
 ## Repository map
 
 ```text
 backend/
+  agent/           OpenAI operator, prompts and strict tools
   api/             FastAPI endpoints
-  forecasting/     model adapters
-  replay/          point-in-time rules
-  storage/         persistent runs and jobs
+  forecasting/     model loaders and GFS feature contract
+  replay/          point-in-time temporal validation
+  storage/         forecast runs, points, events and jobs
   weather/         NOAA GFS archive access
-  workflow/        worker and recalculation logic
+  workflow/        worker and recalculation lifecycle
 
-frontend/          Mangust operations dashboard
-data/              replay fixtures and registered runtime inputs
-docs/              architecture, replay and implementation notes
-tests/             backend and temporal/integration tests
-replay.py          reproducible AS OF replay CLI
+ml/                archived-GFS dataset and model training
+artifacts/models/  packaged forecast bundles
+data/fixtures/     reproducible GFS replay fixtures
+frontend/          Mangust React/TypeScript dashboard
+docs/              architecture, API and training documentation
+tests/             backend, agent, replay and integration tests
+replay.py          point-in-time replay CLI
 ```
-
-## HackAlem AI criteria
-
-| Criterion | Evidence in Mangust |
-| --- | --- |
-| **Task fit & workability · 25** | 24–48h two-turbine replay, real archived weather, forecast API and dashboard |
-| **Technical implementation · 25** | point-in-time validation, durable worker, immutable revisions, strict model/snapshot contracts |
-| **README & reproducibility · 25** | offline fixture, replay CLI, hashes, documented commands and automated tests |
-| **Value & applicability · 15** | operational wind forecasting with transparent provenance instead of opaque predictions |
-| **Development potential & originality · 10** | forecast time machine, auditable revisions and bounded AI orchestration |
-
-## Design principles
-
-**No fake success.** Missing or incompatible inputs block the run.
-
-**No hidden future data.** Replay is based on what was actually available at the simulated origin.
-
-**No AI-generated power values.** Numerical forecasting belongs to the forecasting engine.
-
-**No rewritten history.** Updated inputs create a new forecast revision with a parent link.
 
 ## Built with
 
@@ -302,18 +357,19 @@ replay.py          reproducible AS OF replay CLI
   <img src="https://skillicons.dev/icons?i=vite" width="48" height="48" alt="Vite" align="middle">
 </p>
 
-Python · FastAPI · LightGBM · NOAA GFS · ecCodes · SQLite · React · TypeScript · Vite · OpenAI
+OpenAI Responses API · Python · FastAPI · LightGBM · NOAA GFS · ecCodes · SQLite · React · TypeScript · Vite
 
 ## Documentation
 
 - [Architecture](docs/architecture.md)
 - [Implementation plan](docs/implementation-plan.md)
+- [Archived GFS training](docs/gfs-training.md)
 - [Weather replay](docs/weather-replay.md)
 - [Backend API](docs/backend-api.md)
-- [Brev training plan](docs/brev-training.md)
+- [OpenAI operator](backend/agent/README.md)
 
 ---
 
 <p align="center">
-  <strong>Mangust turns a forecast into an auditable decision artifact.</strong>
+  <strong>Mangust does not just predict power. It runs, validates and records the forecasting operation.</strong>
 </p>
