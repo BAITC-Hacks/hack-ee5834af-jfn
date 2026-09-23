@@ -55,7 +55,7 @@ class ForecastService:
             return resolved
         if not resolved.is_dir():
             raise RegistryError(f"registered model bundle is missing: {model_id}")
-        for name in ("metadata.json", "feature_schema.json", "data_manifest.json", "model.txt"):
+        for name in ("metadata.json", "feature_schema.json", "model.txt"):
             try:
                 (resolved / name).resolve(strict=True).relative_to(resolved)
             except (OSError, ValueError) as exc:
@@ -160,11 +160,8 @@ class ForecastService:
             actual = {(p["turbine_id"],parse_timestamp(p["target_start"]),parse_timestamp(p["target_end"])) for p in points}
             if len(points) != 2 * run["horizon"] or actual != expected:
                 raise ModelBlocked("model output has incomplete coverage")
-            metadata = bundle.get("metadata", bundle.get("bundle", {}))
-            audit.update({"model_training_cutoff":metadata["training_cutoff"], "point_count":len(points), "model_kind":bundle["kind"]})
-            if bundle["kind"] == "scada_lightgbm_v1":
-                audit.update({"model_sha256":bundle["model_sha256"], "model_feature_schema":metadata["feature_order"], "model_weather_mapping":metadata["weather_mapping"], "model_source_timezone":metadata["source_timezone"], "model_limitations":bundle["manifest"]["limitations"]})
-            self.store.finish(run["id"],points,audit,bundle.get("warning"))
+            audit.update({"model_training_cutoff":bundle["training_cutoff"],"point_count":len(points)})
+            self.store.finish(run["id"],points,audit)
         except Exception as exc:
             self.store.block(run["id"],str(exc),audit)
         return run["id"]

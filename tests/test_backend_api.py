@@ -11,7 +11,6 @@ from backend.forecasting.adapter import FEATURES
 
 
 FIXTURE = Path(__file__).parents[1] / "data/fixtures/noaa-gfs-20260206T000000Z-h48.json"
-SCADA = Path(__file__).parents[1] / "artifacts/models/brev-scada-pooled-lgbm-20260201"
 
 
 class ApiTests(unittest.TestCase):
@@ -64,21 +63,6 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(response.json()["parent_run_id"],parent)
         self.assertFalse(response.json()["created"])
         self.assertEqual(response.json()["id"],parent)
-
-    def test_committed_scada_model_runs_through_http_worker(self):
-        shutil.copytree(SCADA, self.app.state.service.model_dir / "brev-scada-pooled-lgbm-20260201")
-        body = {"as_of":"2026-02-06T00:00:00Z", "horizon":48,
-                "model_id":"brev-scada-pooled-lgbm-20260201", "weather_snapshot_id":"gfs-feb6"}
-        response = self.client.post("/forecast-runs", json=body)
-        self.assertEqual(response.status_code, 202)
-        run_id = response.json()["id"]
-        self.app.state.service.process_one()
-        forecast = self.client.get(f"/forecast-runs/{run_id}/forecast").json()
-        self.assertEqual(forecast["status"], "SUCCEEDED")
-        self.assertEqual(len(forecast["points"]), 96)
-        self.assertIn("operational forecast accuracy is unmeasured", forecast["warnings"][0])
-        audit = self.client.get(f"/forecast-runs/{run_id}/audit").json()["details"]
-        self.assertEqual(audit["model_kind"], "scada_lightgbm_v1")
 
 
 if __name__ == "__main__": unittest.main()

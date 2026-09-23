@@ -1,7 +1,0 @@
-{
-  "timestamp_format": "%Y-%m-%d %H:%M:%S",
-  "source_timezone": "Asia/Almaty",
-  "first_forecast_origin": "2026-02-01 00:00:00",
-  "scada_delay_hours": 0,
-  "wind_speed_max_mps": 30
-}
