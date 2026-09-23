@@ -47,7 +47,7 @@ export default function App() {
   const cards = [{ label: text.modelVersion, value: displayData?.modelVersion }, { label: text.weatherAge, value: displayData?.weatherAge }, { label: text.scadaFreshness, value: displayData?.scadaFreshness }, { label: text.temporalValidation, value: displayData?.temporalValidation }];
   return <div className="app-shell">
     <header className="app-header">
-      <div className="brand"><span className="mark">W</span><div><strong>Wind Operator</strong><span>{text.operations}</span></div></div>
+      <div className="brand"><span className="mark" aria-hidden="true">M</span><div><strong>Mangust</strong><span>{text.operations}</span></div></div>
       <nav aria-label="Primary navigation">
         <a className="active" href="#dashboard">{text.dashboard}</a>
         <a href="#replay">{text.replay}</a>
