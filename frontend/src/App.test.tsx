@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
+import { formatForecastTime } from './time';
 
 describe('dashboard', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -10,6 +11,7 @@ describe('dashboard', () => {
     expect(screen.getByText(/not measured data or an operational prediction/i)).toBeInTheDocument();
     expect(await screen.findByLabelText(/Forecast lines for Turbine 1 and Turbine 2/i)).toBeInTheDocument();
     expect(screen.getByText(/Actuals and confidence intervals are unavailable/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('term')[0]).toHaveTextContent(/Replay as of/i);
   });
 
   it('shows an API error without restoring fixture results', async () => {
@@ -35,5 +37,9 @@ describe('dashboard', () => {
     expect(requestSignal?.aborted).toBe(true);
     expect(screen.getByRole('button', { name: /Run forecast/i })).toBeEnabled();
     expect(screen.queryByText(/Two-turbine forecast/i)).not.toBeInTheDocument();
+  });
+
+  it('formats chart hours in the replay timezone with a date', () => {
+    expect(formatForecastTime('2026-02-05T20:00:00.000Z')).toMatch(/06 Feb, 01:00/i);
   });
 });

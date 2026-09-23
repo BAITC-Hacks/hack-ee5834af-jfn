@@ -1,8 +1,9 @@
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { ForecastPoint } from '../types';
+import { formatForecastTime } from '../time';
 
 export function ForecastChart({ points, isDemo }: { points: ForecastPoint[]; isDemo: boolean }) {
-  const data = points.map(p => ({ ...p, hour: new Date(p.targetStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }));
+  const data = points.map(p => ({ ...p, hour: formatForecastTime(p.targetStart) }));
   return <section className="card chart-card" aria-labelledby="chart-title">
     <div className="section-heading"><div><span className="eyebrow">Normalized power · 0–1</span><h2 id="chart-title">Two-turbine forecast</h2></div><span className="chart-range">{points.length} hours</span></div>
     <p className="muted">{isDemo ? 'Illustrative fixture series only. ' : ''}Actuals and confidence intervals are unavailable.</p>
