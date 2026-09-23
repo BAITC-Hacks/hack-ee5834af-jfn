@@ -162,6 +162,9 @@ class Store:
     def block(self, run_id: str, reason: str, audit: dict[str, Any]) -> None:
         timestamp = now_utc()
         with self.tx(immediate=True) as db:
+            existing = db.execute("SELECT published FROM runs WHERE id=?", (run_id,)).fetchone()
+            if existing and existing["published"]:
+                return
             db.execute("UPDATE runs SET status='BLOCKED',error=?,updated_at=?,audit_json=? WHERE id=?",
                        (reason,timestamp,json.dumps(audit,sort_keys=True),run_id))
             db.execute("UPDATE jobs SET status='DONE',error=?,updated_at=?,lease_until=NULL WHERE run_id=?",

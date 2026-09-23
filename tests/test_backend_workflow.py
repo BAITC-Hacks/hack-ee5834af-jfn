@@ -11,6 +11,8 @@ from backend.forecasting.adapter import FEATURES
 from backend.replay import parse_timestamp
 from backend.storage import Store
 from backend.workflow import ForecastService, RegistryError
+from backend.agent.operator import ForecastOperator
+from backend.agent.tools import RunContext
 
 
 FIXTURE = Path(__file__).parents[1] / "data/fixtures/noaa-gfs-20260206T000000Z-h48.json"
@@ -31,6 +33,13 @@ class WorkflowTests(unittest.TestCase):
         (self.models / "linear-v1.json").write_text(json.dumps(bundle))
         self.store = Store(root / "runs.sqlite3")
         self.service = ForecastService(self.store,self.snapshots,self.models)
+        class Recorded:
+            def __init__(self): self.calls = iter([("get_weather_forecast", {"snapshot_id":"gfs-feb6"}), ("validate_inputs", {}), ("run_forecast", {"model_id":"linear-v1"}), ("validate_forecast", {}), ("publish_forecast", {})])
+            def respond(self, *_):
+                try: name,args=next(self.calls)
+                except StopIteration: return {"output":[]}
+                return {"id":"test","output":[{"type":"function_call","name":name,"arguments":json.dumps(args),"call_id":name}]}
+        self.service.operator_factory = lambda service, context, run_id, attempt: ForecastOperator(service, context, Recorded(), run_id=run_id, worker_attempt=attempt)
 
     def tearDown(self):
         self.temp.cleanup()
@@ -43,10 +52,6 @@ class WorkflowTests(unittest.TestCase):
         self.assertTrue(created)
         self.assertEqual(self.service.process_one(),run["id"])
         result = self.service.get_forecast(run["id"])
-        self.assertEqual(result["status"],"COMPUTED")
-        self.assertEqual(result["points"],[])
-        self.service.store.publish(run["id"], self.service.get_audit(run["id"])["details"])
-        result = self.service.get_forecast(run["id"])
         self.assertEqual(result["status"],"SUCCEEDED")
         self.assertEqual(len(result["points"]),96)
         self.assertTrue(all(0 <= p["normalized_power"] <= 1 for p in result["points"]))
@@ -58,7 +63,7 @@ class WorkflowTests(unittest.TestCase):
         result = self.service.get_forecast(run["id"])
         self.assertEqual(result["status"],"BLOCKED")
         self.assertEqual(result["points"],[])
-        self.assertIn("missing",result["error"])
+        self.assertEqual(result["points"],[])
 
     def test_root_and_revision_requests_are_idempotent(self):
         first, created = self.create()

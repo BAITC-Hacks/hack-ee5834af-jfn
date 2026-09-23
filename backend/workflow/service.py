@@ -27,6 +27,7 @@ class ForecastService:
         self.model_dir = Path(model_dir).resolve()
         self.snapshot_dir.mkdir(parents=True, exist_ok=True)
         self.model_dir.mkdir(parents=True, exist_ok=True)
+        self.operator_factory = None
 
     @staticmethod
     def _id(value: str, label: str) -> str:
@@ -146,7 +147,8 @@ class ForecastService:
         from backend.agent.operator import ForecastOperator
         from backend.agent.tools import RunContext
         context = RunContext(run["as_of"], run["horizon"], run["model_id"], (run["weather_snapshot_id"],), run["mode"])
-        result = ForecastOperator(self, context, run_id=run["id"], worker_attempt=job["attempts"]).run_live(allow_fallback=False)
+        operator = self.operator_factory(self, context, run["id"], job["attempts"]) if self.operator_factory else ForecastOperator(self, context, run_id=run["id"], worker_attempt=job["attempts"])
+        result = operator.run_live(allow_fallback=False)
         if not result.published:
             audit = self.get_audit(run["id"])
             self.store.block(run["id"], result.reason, audit["details"] if audit else {})

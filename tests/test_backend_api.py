@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from backend.api.app import create_app
 from backend.forecasting.adapter import FEATURES
+from backend.agent.operator import ForecastOperator
 
 
 FIXTURE = Path(__file__).parents[1] / "data/fixtures/noaa-gfs-20260206T000000Z-h48.json"
@@ -26,6 +27,13 @@ class ApiTests(unittest.TestCase):
             "coefficients":{name:0.0 for name in FEATURES},
         }))
         self.app = create_app(database=root / "api.sqlite3",snapshot_dir=snapshots,model_dir=models,background=False)
+        class Recorded:
+            def __init__(self): self.calls=iter([("get_weather_forecast",{"snapshot_id":"gfs-feb6"}),("validate_inputs",{}),("run_forecast",{"model_id":"linear-v1"}),("validate_forecast",{}),("publish_forecast",{})])
+            def respond(self,*_):
+                try: name,args=next(self.calls)
+                except StopIteration: return {"output":[]}
+                return {"id":"test","output":[{"type":"function_call","name":name,"arguments":json.dumps(args),"call_id":name}]}
+        self.app.state.service.operator_factory=lambda service,context,run_id,attempt: ForecastOperator(service,context,Recorded(),run_id=run_id,worker_attempt=attempt)
         self.client = TestClient(self.app)
 
     def tearDown(self): self.temp.cleanup()
