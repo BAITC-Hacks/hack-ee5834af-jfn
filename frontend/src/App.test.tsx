@@ -1,9 +1,10 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 
 describe('dashboard', () => {
-  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); localStorage.clear(); });
+  beforeEach(() => vi.stubEnv('VITE_MODEL_ID', 'linear-v1'));
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllEnvs(); localStorage.clear(); });
   it('defaults to the registered API replay origin and keeps errors honest', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 422 }));
     render(<App />);

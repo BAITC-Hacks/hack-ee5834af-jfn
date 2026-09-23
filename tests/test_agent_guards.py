@@ -171,6 +171,20 @@ class AgentGuardTests(unittest.TestCase):
         self.assertFalse(tools.invoke("validate_forecast", {})["ok"])
         self.assertFalse(tools.invoke("publish_forecast", {})["ok"])
 
+    def test_computed_artifact_cannot_be_published_after_model_changes(self):
+        first = AgentTools(self.service, self.context)
+        for name, args in self.sequence()[:3]:
+            self.assertTrue(first.invoke(name, args)["ok"])
+        self.assertEqual(self.service.get_run(first.run_id)["status"], "COMPUTED")
+        path = self.service.model_dir / "linear-v1.json"
+        path.write_text(path.read_text() + " ")
+        retry = AgentTools(self.service, self.context, run_id=first.run_id)
+        self.assertTrue(retry.invoke("get_weather_forecast", {"snapshot_id": "fresh"})["ok"])
+        self.assertTrue(retry.invoke("validate_inputs", {})["ok"])
+        self.assertTrue(retry.invoke("run_forecast", {"model_id": "linear-v1"})["ok"])
+        self.assertFalse(retry.invoke("validate_forecast", {})["ok"])
+        self.assertEqual(self.service.get_forecast(first.run_id)["points"], [])
+
     def test_openai_outage_has_separately_labelled_fallback(self):
         result = ForecastOperator(self.service, self.context, FailingResponses(),
                                   unavailable=frozenset({"fresh"})).run_live()

@@ -138,13 +138,19 @@ class AgentTools:
         return outcome
 
     def get_weather_forecast(self, snapshot_id: str) -> dict[str, Any]:
-        if self.run_id is not None and self.service.get_run(self.run_id)["status"] == "COMPUTED":
-            raise PublishRejected("weather cannot change after numerical inference")
+        if self.run_id is not None:
+            existing = self.service.get_run(self.run_id)
+            if existing is not None and existing["status"] == "COMPUTED" and snapshot_id != existing["weather_snapshot_id"]:
+                raise PublishRejected("weather cannot change after numerical inference")
         if snapshot_id not in self.context.candidates:
             raise PublishRejected("snapshot is not an approved candidate")
         if snapshot_id in self.unavailable:
             raise PublishRejected("weather source unavailable (injected demo failure)")
         _, digest = self.service.load_snapshot(snapshot_id, self.context.replay)
+        if self.run_id is not None:
+            existing = self.service.get_run(self.run_id)
+            if existing is not None and existing["status"] == "COMPUTED" and digest != existing["snapshot_hash"]:
+                raise PublishRejected("weather changed after numerical inference")
         self.selected = snapshot_id
         self.snapshot_hash = digest
         self.input_passed = False
@@ -234,6 +240,8 @@ class AgentTools:
         audit = self.service.get_audit(self.run_id)
         if audit is None or audit["status"] not in ("COMPUTED", "SUCCEEDED") or audit["details"].get("point_count") != 2 * self.context.horizon:
             raise PublishRejected("forecast audit is incomplete")
+        if audit["details"].get("model_sha256") != self.model_hash:
+            raise PublishRejected("forecast model differs from computed artifact")
         points = self.service.store.points(self.run_id)
         expected = {(p["turbine_id"], parse_timestamp(p["target_start"]).isoformat(),
                      parse_timestamp(p["target_end"]).isoformat()) for p in snapshot["points"]}

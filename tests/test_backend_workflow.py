@@ -102,10 +102,20 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(recovered["attempts"],2)
 
     def test_reclaimed_computed_run_reuses_private_points(self):
-        run, _ = self.create(); self.service.process_one()
+        run, _ = self.create()
+        first = self.store.claim_job(lease_seconds=1)
+        self.service.compute_run(run["id"], first["attempts"])
+        self.assertEqual(self.service.get_run(run["id"])["status"], "COMPUTED")
+        self.assertEqual(len(self.store.points(run["id"])), 96)
+        self.assertEqual(self.service.get_forecast(run["id"])["points"], [])
+        with closing(self.store.connect()) as db:
+            db.execute("UPDATE jobs SET lease_until='2000-01-01T00:00:00+00:00' WHERE id=?", (first["id"],))
+        self.service.process_one()
         self.assertEqual(self.service.get_run(run["id"])["status"], "SUCCEEDED")
-        # Publication is terminal: a later worker cannot duplicate or replace points.
         self.assertEqual(len(self.service.get_forecast(run["id"])["points"]), 96)
+        events = self.service.get_events(run["id"])
+        self.assertEqual(len([event for event in events if event["type"] == "FORECAST_COMPUTED"]), 1)
+        self.assertEqual(len([event for event in events if event["type"] == "FORECAST_READY"]), 1)
 
     def test_rejects_unregistered_and_path_ids(self):
         with self.assertRaises(RegistryError): self.create(snapshot="../secret")

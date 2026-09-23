@@ -132,11 +132,18 @@ class ForecastService:
         try:
             snapshot, actual_hash = self.load_snapshot(run["weather_snapshot_id"],context)
             if actual_hash != run["snapshot_hash"]: raise ModelBlocked("registered snapshot changed after run creation")
-            bundle = load_bundle(self._registered(self.model_dir,run["model_id"],"model_id"),run["model_id"],context)
+            model_path = self._registered(self.model_dir,run["model_id"],"model_id")
+            model_hash = hashlib.sha256(model_path.read_bytes()).hexdigest()
+            bundle = load_bundle(model_path,run["model_id"],context)
             points = predict(bundle,snapshot["points"])
+            if hashlib.sha256(model_path.read_bytes()).hexdigest() != model_hash:
+                raise ModelBlocked("registered model changed during inference")
             expected = {(p["turbine_id"],parse_timestamp(p["target_start"]),parse_timestamp(p["target_end"])) for p in snapshot["points"]}; actual = {(p["turbine_id"],parse_timestamp(p["target_start"]),parse_timestamp(p["target_end"])) for p in points}
             if len(points) != 2 * run["horizon"] or actual != expected: raise ModelBlocked("model output has incomplete coverage")
-            audit.update({"model_training_cutoff":bundle["training_cutoff"],"point_count":len(points)}); self.store.compute(run_id,points,audit)
+            audit.update({"model_training_cutoff":bundle["training_cutoff"],
+                          "model_sha256":model_hash,
+                          "point_count":len(points)})
+            self.store.compute(run_id,points,audit)
         except Exception as exc: self.store.block(run_id,str(exc),audit)
         return run_id
 
