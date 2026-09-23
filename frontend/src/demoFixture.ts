@@ -10,20 +10,20 @@ export function createDemoData(request: ReplayRequest): DashboardData {
   }));
   return {
     isDemo: true,
-    run: { id: `demo-fixture-${request.horizon}h`, status: 'succeeded', parentRunId: 'demo-fixture-previous' },
-    modelVersion: 'Illustrative model fixture', weatherAge: 'Illustrative · 3h', scadaFreshness: 'Unavailable in demo', temporalValidation: 'DEMO · assumptions',
+    run: { id: `sample-run-${request.horizon}h`, status: 'succeeded', parentRunId: 'sample-run-previous' },
+    modelVersion: 'Preview model', weatherAge: '3 hours', scadaFreshness: 'Not provided', temporalValidation: 'Assumptions',
     forecast,
     audit: [
       { label: 'Replay as of', value: origin.toISOString() }, { label: 'Weather init', value: new Date(origin.getTime() - 3 * 3_600_000).toISOString() },
       { label: 'Weather available at', value: new Date(origin.getTime() - 2.5 * 3_600_000).toISOString() }, { label: 'SCADA cutoff', value: undefined },
-      { label: 'Snapshot ID', value: 'demo-weather-snapshot' }, { label: 'Input hash', value: 'demo:8f2b…41c9' },
+      { label: 'Snapshot ID', value: 'sample-weather-snapshot' }, { label: 'Input hash', value: 'sample:8f2b…41c9' },
     ],
-    warnings: ['Illustrative fixture only — values are not an operational forecast.', 'Fresh SCADA is unavailable in this fixture.'],
+    warnings: ['Sample values are not an operational forecast.', 'Fresh SCADA is not provided in this preview.'],
     events: [
       { id: '1', time: '00:00', tool: 'create_run_context', detail: `Locked replay origin and ${request.horizon}h policy`, status: 'done' },
-      { id: '2', time: '00:01', tool: 'resolve_weather', detail: 'Selected a demo weather snapshot', status: 'done' },
+      { id: '2', time: '00:01', tool: 'resolve_weather', detail: 'Selected a sample weather snapshot', status: 'done' },
       { id: '3', time: '00:02', tool: 'validate_inputs', detail: 'SCADA freshness unavailable', status: 'warning' },
-      { id: '4', time: '00:03', tool: 'publish_forecast', detail: 'Published illustrative fixture', status: 'done' },
+      { id: '4', time: '00:03', tool: 'publish_forecast', detail: 'Published sample output', status: 'done' },
     ],
   };
 }
