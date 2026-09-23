@@ -51,7 +51,7 @@ class Store:
               weather_snapshot_id TEXT NOT NULL, snapshot_hash TEXT NOT NULL,
               input_hash TEXT NOT NULL, idempotency_key TEXT NOT NULL UNIQUE,
               parent_run_id TEXT REFERENCES runs(id), warning TEXT, error TEXT,
-              audit_json TEXT NOT NULL DEFAULT '{}'
+              audit_json TEXT NOT NULL DEFAULT '{}', published INTEGER NOT NULL DEFAULT 0
             );
             CREATE UNIQUE INDEX IF NOT EXISTS revisions_unique
               ON runs(parent_run_id,input_hash) WHERE parent_run_id IS NOT NULL;
@@ -72,6 +72,8 @@ class Store:
               error TEXT
             );
             """)
+            if "published" not in {row[1] for row in db.execute("PRAGMA table_info(runs)")}:
+                db.execute("ALTER TABLE runs ADD COLUMN published INTEGER NOT NULL DEFAULT 0")
 
     def create_run(self, record: dict[str, Any]) -> tuple[dict[str, Any], bool]:
         timestamp = now_utc()
@@ -136,16 +138,26 @@ class Store:
                        (row["run_id"],now.isoformat(),"JOB_CLAIMED",json.dumps({"lease_until":lease})))
             return dict(db.execute("SELECT * FROM jobs WHERE id=?", (row["id"],)).fetchone())
 
-    def finish(self, run_id: str, points: list[dict[str, Any]], audit: dict[str, Any]) -> None:
+    def compute(self, run_id: str, points: list[dict[str, Any]], audit: dict[str, Any]) -> None:
         timestamp = now_utc()
         with self.tx(immediate=True) as db:
             db.executemany("""INSERT INTO points(run_id,turbine_id,target_start,target_end,normalized_power)
                 VALUES(?,?,?,?,?)""", [(run_id,p["turbine_id"],p["target_start"],p["target_end"],p["normalized_power"]) for p in points])
-            db.execute("UPDATE runs SET status='SUCCEEDED',updated_at=?,audit_json=? WHERE id=?",
+            db.execute("UPDATE runs SET status='COMPUTED',updated_at=?,audit_json=? WHERE id=?",
                        (timestamp,json.dumps(audit,sort_keys=True),run_id))
-            db.execute("UPDATE jobs SET status='DONE',updated_at=?,lease_until=NULL WHERE run_id=?", (timestamp,run_id))
             db.execute("INSERT INTO events(run_id,created_at,type,payload_json) VALUES(?,?,?,?)",
-                       (run_id,timestamp,"FORECAST_READY",json.dumps({"points":len(points)})))
+                       (run_id,timestamp,"FORECAST_COMPUTED",json.dumps({"points":len(points)})))
+
+    def publish(self, run_id: str, audit: dict[str, Any]) -> None:
+        timestamp = now_utc()
+        with self.tx(immediate=True) as db:
+            row = db.execute("SELECT status,published FROM runs WHERE id=?", (run_id,)).fetchone()
+            if not row: raise ValueError("forecast is not computed")
+            if row["published"]: return
+            if row["status"] != "COMPUTED": raise ValueError("forecast is not computed")
+            db.execute("UPDATE runs SET status='SUCCEEDED',published=1,updated_at=?,audit_json=? WHERE id=?", (timestamp,json.dumps(audit,sort_keys=True),run_id))
+            db.execute("UPDATE jobs SET status='DONE',updated_at=?,lease_until=NULL WHERE run_id=?", (timestamp,run_id))
+            db.execute("INSERT INTO events(run_id,created_at,type,payload_json) VALUES(?,?,?,?)", (run_id,timestamp,"FORECAST_READY",json.dumps({"publication":"APPROVED"})))
 
     def block(self, run_id: str, reason: str, audit: dict[str, Any]) -> None:
         timestamp = now_utc()

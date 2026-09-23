@@ -89,7 +89,7 @@ class ForecastService:
         run = self.store.get_run(run_id)
         if not run:
             return None
-        return {"run_id":run_id,"status":run["status"],"points":self.store.points(run_id),
+        return {"run_id":run_id,"status":run["status"],"points":self.store.points(run_id) if run["status"] == "SUCCEEDED" and run.get("published") else [],
                 "warnings":[run["warning"]] if run["warning"] else [],"error":run["error"],
                 "provenance":{"as_of":run["as_of"],"horizon":run["horizon"],"model_id":run["model_id"],
                               "weather_snapshot_id":run["weather_snapshot_id"],"snapshot_hash":run["snapshot_hash"]}}
@@ -121,28 +121,35 @@ class ForecastService:
         return self.create_run(as_of=revision_as_of,horizon=parent["horizon"],model_id=parent["model_id"],
                                weather_snapshot_id=weather_snapshot_id,mode=parent["mode"],parent_run_id=run_id)
 
+    def compute_run(self, run_id: str, worker_attempt: int | None = None) -> str:
+        run = self.store.get_run(run_id)
+        if not run: raise KeyError(run_id)
+        context = ReplayContext(parse_timestamp(run["as_of"]),run["horizon"])
+        audit = {"input_hash":run["input_hash"],"snapshot_hash":run["snapshot_hash"],"worker_attempt":worker_attempt}
+        try:
+            snapshot, actual_hash = self.load_snapshot(run["weather_snapshot_id"],context)
+            if actual_hash != run["snapshot_hash"]: raise ModelBlocked("registered snapshot changed after run creation")
+            bundle = load_bundle(self._registered(self.model_dir,run["model_id"],"model_id"),run["model_id"],context)
+            points = predict(bundle,snapshot["points"])
+            expected = {(p["turbine_id"],parse_timestamp(p["target_start"]),parse_timestamp(p["target_end"])) for p in snapshot["points"]}; actual = {(p["turbine_id"],parse_timestamp(p["target_start"]),parse_timestamp(p["target_end"])) for p in points}
+            if len(points) != 2 * run["horizon"] or actual != expected: raise ModelBlocked("model output has incomplete coverage")
+            audit.update({"model_training_cutoff":bundle["training_cutoff"],"point_count":len(points)}); self.store.compute(run_id,points,audit)
+        except Exception as exc: self.store.block(run_id,str(exc),audit)
+        return run_id
+
     def process_one(self, lease_seconds: int = 60) -> str | None:
         job = self.store.claim_job(lease_seconds)
         if not job:
             return None
         run = self.store.get_run(job["run_id"])
         assert run is not None
-        context = ReplayContext(parse_timestamp(run["as_of"]),run["horizon"])
-        audit = {"input_hash":run["input_hash"],"snapshot_hash":run["snapshot_hash"],"worker_attempt":job["attempts"]}
-        try:
-            snapshot, actual_hash = self.load_snapshot(run["weather_snapshot_id"],context)
-            if actual_hash != run["snapshot_hash"]:
-                raise ModelBlocked("registered snapshot changed after run creation")
-            bundle = load_bundle(self._registered(self.model_dir,run["model_id"],"model_id"),run["model_id"],context)
-            points = predict(bundle,snapshot["points"])
-            expected = {(p["turbine_id"],parse_timestamp(p["target_start"]),parse_timestamp(p["target_end"])) for p in snapshot["points"]}
-            actual = {(p["turbine_id"],parse_timestamp(p["target_start"]),parse_timestamp(p["target_end"])) for p in points}
-            if len(points) != 2 * run["horizon"] or actual != expected:
-                raise ModelBlocked("model output has incomplete coverage")
-            audit.update({"model_training_cutoff":bundle["training_cutoff"],"point_count":len(points)})
-            self.store.finish(run["id"],points,audit)
-        except Exception as exc:
-            self.store.block(run["id"],str(exc),audit)
+        from backend.agent.operator import ForecastOperator
+        from backend.agent.tools import RunContext
+        context = RunContext(run["as_of"], run["horizon"], run["model_id"], (run["weather_snapshot_id"],), run["mode"])
+        result = ForecastOperator(self, context, run_id=run["id"], worker_attempt=job["attempts"]).run_live(allow_fallback=False)
+        if not result.published:
+            audit = self.get_audit(run["id"])
+            self.store.block(run["id"], result.reason, audit["details"] if audit else {})
         return run["id"]
 
     def tick_scheduler(self) -> int:

@@ -75,14 +75,16 @@ class PublishRejected(RuntimeError):
 
 class AgentTools:
     def __init__(self, service: ForecastService, context: RunContext,
-                 unavailable: frozenset[str] = frozenset()):
+                 unavailable: frozenset[str] = frozenset(), run_id: str | None = None,
+                 worker_attempt: int | None = None):
         self.service = service
         self.context = context
         self.unavailable = unavailable
         self.selected: str | None = None
         self.snapshot_hash: str | None = None
         self.model_hash: str | None = None
-        self.run_id: str | None = None
+        self.run_id: str | None = run_id
+        self.worker_attempt = worker_attempt
         self.input_passed = False
         self.output_passed = False
         self.published = False
@@ -136,7 +138,7 @@ class AgentTools:
         return outcome
 
     def get_weather_forecast(self, snapshot_id: str) -> dict[str, Any]:
-        if self.run_id is not None:
+        if self.run_id is not None and self.service.get_run(self.run_id)["status"] == "COMPUTED":
             raise PublishRejected("weather cannot change after numerical inference")
         if snapshot_id not in self.context.candidates:
             raise PublishRejected("snapshot is not an approved candidate")
@@ -167,15 +169,19 @@ class AgentTools:
             raise PublishRejected("model_id is immutable")
         if not self.input_passed or self.selected is None:
             raise PublishRejected("input validation has not passed")
-        run, _ = self.service.create_run(as_of=self.context.as_of, horizon=self.context.horizon,
-                                         model_id=model_id, weather_snapshot_id=self.selected,
-                                         mode=self.context.mode)
-        self.run_id = run["id"]
+        if self.run_id is None:
+            run, _ = self.service.create_run(as_of=self.context.as_of, horizon=self.context.horizon,
+                                             model_id=model_id, weather_snapshot_id=self.selected,
+                                             mode=self.context.mode)
+            self.run_id = run["id"]
         self._flush()
-        if run["status"] == "QUEUED":
-            self.service.process_one()
         current = self.service.get_run(self.run_id)
-        if current is None or current["status"] != "SUCCEEDED":
+        if current is None:
+            raise PublishRejected("forecast artifact disappeared")
+        if current["status"] not in ("COMPUTED", "SUCCEEDED"):
+            self.service.compute_run(self.run_id, self.worker_attempt)
+        current = self.service.get_run(self.run_id)
+        if current is None or current["status"] not in ("COMPUTED", "SUCCEEDED"):
             raise PublishRejected("forecast engine blocked: " + str(current and current["error"]))
         return {"ok": True, "artifact_id": self.run_id, "status": "COMPUTED"}
 
@@ -188,6 +194,8 @@ class AgentTools:
         self._gate()  # repeat independently even if the model skips validation
         if not self.input_passed or not self.output_passed:
             raise PublishRejected("required validation tools have not passed")
+        audit = self.service.get_audit(self.run_id)
+        self.service.store.publish(self.run_id, audit["details"])
         self.published = True
         return {"ok": True, "artifact_id": self.run_id, "publication": "APPROVED"}
 
@@ -209,7 +217,7 @@ class AgentTools:
         if self.run_id is None or self.selected is None:
             raise PublishRejected("unknown forecast artifact")
         run = self.service.get_run(self.run_id)
-        if run is None or run["status"] != "SUCCEEDED":
+        if run is None or run["status"] not in ("COMPUTED", "SUCCEEDED"):
             raise PublishRejected("forecast artifact is not successful")
         if (run["as_of"] != self.context.as_of or run["horizon"] != self.context.horizon
                 or run["model_id"] != self.context.model_id
@@ -224,10 +232,9 @@ class AgentTools:
         if self.model_hash is None or hashlib.sha256(model_path.read_bytes()).hexdigest() != self.model_hash:
             raise PublishRejected("registered model changed after input validation")
         audit = self.service.get_audit(self.run_id)
-        if audit is None or audit["status"] != "SUCCEEDED" or audit["details"].get("point_count") != 2 * self.context.horizon:
+        if audit is None or audit["status"] not in ("COMPUTED", "SUCCEEDED") or audit["details"].get("point_count") != 2 * self.context.horizon:
             raise PublishRejected("forecast audit is incomplete")
-        forecast = self.service.get_forecast(self.run_id)
-        points = forecast["points"] if forecast else []
+        points = self.service.store.points(self.run_id)
         expected = {(p["turbine_id"], parse_timestamp(p["target_start"]).isoformat(),
                      parse_timestamp(p["target_end"]).isoformat()) for p in snapshot["points"]}
         actual = {(p["turbine_id"], parse_timestamp(p["target_start"]).isoformat(),

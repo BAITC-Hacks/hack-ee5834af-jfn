@@ -81,7 +81,7 @@ class OperatorResult:
 
 class ForecastOperator:
     def __init__(self, service: ForecastService, context: RunContext,
-                 client: Any | None = None, *, max_tool_calls: int = 10,
+                 client: Any | None = None, *, max_tool_calls: int = 10, run_id: str | None = None, worker_attempt: int | None = None,
                  max_seconds: float = 45, unavailable: frozenset[str] = frozenset()):
         if max_tool_calls < 1 or max_seconds <= 0:
             raise ValueError("positive tool and time limits are required")
@@ -91,9 +91,11 @@ class ForecastOperator:
         self.max_tool_calls = max_tool_calls
         self.max_seconds = max_seconds
         self.unavailable = unavailable
+        self.run_id = run_id
+        self.worker_attempt = worker_attempt
 
     def _tools(self) -> AgentTools:
-        return AgentTools(self.service, self.context, self.unavailable)
+        return AgentTools(self.service, self.context, self.unavailable, self.run_id, self.worker_attempt)
 
     def _result(self, tools: AgentTools, execution: str, reason: str) -> OperatorResult:
         tools.decision(reason, execution)
