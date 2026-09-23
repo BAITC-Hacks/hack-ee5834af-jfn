@@ -5,7 +5,7 @@ import { AgentTimeline } from './components/AgentTimeline';
 import { AuditPanel } from './components/AuditPanel';
 import { ForecastChart } from './components/ForecastChart';
 import { ReplayControls } from './components/ReplayControls';
-import type { DashboardData, ReplayRequest, SourceMode } from './types';
+import type { AgentEvent, DashboardData, ReplayRequest, SourceMode } from './types';
 import { copy as translations, type Language } from './i18n';
 
 const api = createApiAdapter(import.meta.env.VITE_API_BASE_URL ?? '/api');
@@ -19,18 +19,19 @@ export default function App() {
   const languageMenu = useRef<HTMLDivElement | null>(null);
   const [request, setRequest] = useState<ReplayRequest>({ asOf: '2026-02-06T11:00:00+05:00', horizon: 48 });
   const [data, setData] = useState<DashboardData | null>(null); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
+  const [liveEvents, setLiveEvents] = useState<AgentEvent[]>([]);
   const controller = useRef<AbortController | null>(null); const adapter = useMemo(() => source === 'demo' ? demoAdapter : api, [source]);
   useEffect(() => () => controller.current?.abort(), []);
   useEffect(() => { const close = (event: PointerEvent) => { if (!languageMenu.current?.contains(event.target as Node)) setLanguageOpen(false); }; document.addEventListener('pointerdown', close); return () => document.removeEventListener('pointerdown', close); }, []);
   useEffect(() => { void run(); /* initial reviewable fixture */ }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function run() {
-    controller.current?.abort(); const current = new AbortController(); controller.current = current; setBusy(true); setError(''); setData(null);
+    controller.current?.abort(); const current = new AbortController(); controller.current = current; setBusy(true); setError(''); setData(null); setLiveEvents([]);
     let timedOut = false;
     const deadline = window.setTimeout(() => { if (!current.signal.aborted) { timedOut = true; current.abort(); if (controller.current === current) { setError('Forecast request timed out after 60 seconds'); setBusy(false); } } }, 60_000);
     try {
       let summary = await adapter.start(request, current.signal);
-      while (!terminal.has(summary.status)) { await pollDelay(current.signal); summary = await adapter.status(summary.id, current.signal); }
+      while (!terminal.has(summary.status)) { await pollDelay(current.signal); summary = await adapter.status(summary.id, current.signal); if (adapter.events) setLiveEvents(await adapter.events(summary.id, current.signal)); }
       if (summary.status === 'failed') throw new Error(summary.error ?? `Run ${summary.id} failed`);
       const result = await adapter.result(summary.id, current.signal); if (!current.signal.aborted) setData(result);
     } catch (cause) { if (controller.current === current && (!current.signal.aborted || timedOut)) setError(timedOut ? 'Forecast request timed out after 60 seconds' : cause instanceof Error ? cause.message : 'Unable to run forecast'); }
@@ -66,6 +67,7 @@ export default function App() {
         {error && <div className="error-state" role="alert"><div><strong>{text.loadError}</strong><span>{error}. {text.noFallback}</span></div><button onClick={() => void run()}>{text.retry}</button></div>}
         <section className="metric-grid" aria-label="Run provenance summary">{cards.map(card => <article className="metric" key={card.label}><span>{card.label}</span><strong>{busy ? text.loading : card.value ?? text.unavailable}</strong></article>)}</section>
         {!data && !busy && !error && <div className="empty-state">{text.empty}</div>}
+        {!displayData && busy && liveEvents.length > 0 && <div className="main-grid"><div className="card chart-card"><h2>Numerical engine</h2><p className="muted">LightGBM forecast is still private until publication approval.</p></div><AgentTimeline events={liveEvents} copy={text} /></div>}
         {displayData && <><div className="main-grid"><ForecastChart points={displayData.forecast} isDemo={displayData.isDemo} copy={text} language={language} /><AgentTimeline events={displayData.events} copy={text} /></div><AuditPanel data={displayData} copy={text} onExport={exportData} /></>}
       </div>
     </main>

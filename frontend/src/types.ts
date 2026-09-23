@@ -13,5 +13,6 @@ export interface DashboardData {
 export interface DashboardAdapter {
   start(request: ReplayRequest, signal?: AbortSignal): Promise<RunSummary>;
   status(runId: string, signal?: AbortSignal): Promise<RunSummary>;
+  events?(runId: string, signal?: AbortSignal): Promise<AgentEvent[]>;
   result(runId: string, signal?: AbortSignal): Promise<DashboardData>;
 }

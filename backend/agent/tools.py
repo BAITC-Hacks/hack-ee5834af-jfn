@@ -130,6 +130,11 @@ class AgentTools:
             outcome = {"ok": False, "reason": "invalid tool or arguments"}
             self._record(name, {}, outcome, call_id, response_id)
             return outcome
+        if self.run_id is not None:
+            with self.service.store.tx(immediate=True) as db:
+                db.execute("INSERT INTO events(run_id,created_at,type,payload_json) VALUES(?,?,?,?)",
+                           (self.run_id, datetime.now(timezone.utc).isoformat(), "AGENT_TOOL_STARTED",
+                            json.dumps({"tool": name, "arguments": args, "call_id": call_id, "response_id": response_id})))
         try:
             outcome = getattr(self, name)(**args)
         except (ValueError, RuntimeError, KeyError, TypeError) as exc:
